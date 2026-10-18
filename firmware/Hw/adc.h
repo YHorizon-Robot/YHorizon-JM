@@ -9,7 +9,7 @@ extern "C" {
 
 /**
  * @brief  ADC0 regular = PB0/IN8 Vbus (software).
- *         Inserted = PA0/IN0 CURA + PA1/IN1 CURB, TIMER0 CH3 at valley.
+ *         Inserted = PA0/IN0 CURA + PA1/IN1 CURB, TIMER0 CH3 near the carrier peak.
  */
 void Adc_Init(void);
 void Adc_Service(void);

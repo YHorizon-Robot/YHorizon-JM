@@ -107,6 +107,8 @@ class HostWindow(QMainWindow):
         self._pos_snap = (0.0, 80.0)
         self._snap_lock = threading.Lock()
         self._pending_node_id: int | None = None
+        self._inner_loop: int | None = None
+        self._vbus: float | None = None
         self._build()
         self._timer = QTimer(self)
         self._timer.setInterval(30)
@@ -233,14 +235,16 @@ class HostWindow(QMainWindow):
         self.val_state = QLabel("—")
         self.val_fault = QLabel("—")
         self.val_mode = QLabel("—")
+        self.val_inner = QLabel("—")
         items = (
             ("位置 rad", self.val_pos),
             ("速度 rad/s", self.val_vel),
-            ("电压 pu", self.val_volt),
+            ("力矩指令 pu", self.val_volt),
             ("反馈", self.val_hz),
             ("State", self.val_state),
             ("Fault", self.val_fault),
             ("Mode", self.val_mode),
+            ("内环", self.val_inner),
         )
         for col, (name, val) in enumerate(items):
             lab = QLabel(name)
@@ -277,7 +281,7 @@ class HostWindow(QMainWindow):
             [
                 ("位置 rad", self.ed_m_pos),
                 ("速度 rad/s", self.ed_m_vel),
-                ("Voltage FF -1~1", self.ed_m_ff),
+                ("力矩前馈 pu -1~1", self.ed_m_ff),
                 ("循环频率 Hz", self.ed_m_rate),
             ],
         )
@@ -485,6 +489,12 @@ class HostWindow(QMainWindow):
         self.worker.start()
         self._set_conn_label(iface, channel, node_id)
         self._log(f"connected iface={iface} ch={channel} bitrate={self.cmb_bitrate.currentText()} id={node_id}")
+        self._inner_loop = None
+        self._vbus = None
+        self.val_inner.setText("—")
+        seq = self._next_seq()
+        self.worker.send(self.worker.ids["mgmt"], proto.pack_mgmt(proto.CMD_GET_STATUS, seq))
+        self._log(f"TX GET_STATUS seq={seq} (inner loop / Vbus)")
 
     def _set_conn_label(self, iface: str, channel: str, node_id: int) -> None:
         self.lbl_conn.setText(f"已连接  {iface}:{channel}  ID={node_id}")
@@ -750,7 +760,11 @@ class HostWindow(QMainWindow):
                 if kind == "fb":
                     self.val_pos.setText(f"{payload['pos']:.4f}")
                     self.val_vel.setText(f"{payload['vel']:.3f}")
-                    self.val_volt.setText(f"{payload['torque']:.3f}")
+                    phys = proto.torque_physical(payload["torque"], self._inner_loop, self._vbus)
+                    if phys is None:
+                        self.val_volt.setText(f"{payload['torque']:.3f}")
+                    else:
+                        self.val_volt.setText(f"{payload['torque']:.3f} ({phys[0]:+.2f} {phys[1]})")
                     self.scope.push_feedback(payload["pos"], payload["vel"], payload["torque"])
                     self.fb_count += 1
                     dt = time.monotonic() - self.fb_t0
@@ -789,8 +803,12 @@ class HostWindow(QMainWindow):
                     self.val_state.setText(str(payload["state_name"]))
                     self.val_fault.setText(str(payload["fault_name"]))
                     self.val_mode.setText(str(payload["mode_name"]))
+                    self._inner_loop = int(payload["inner_loop"])
+                    self._vbus = float(payload["vbus"])
+                    self.val_inner.setText("电流" if self._inner_loop == proto.INNER_LOOP_CURRENT else "电压")
                     self._log(
                         f"STATUS {payload['state_name']} mode={payload['mode_name']} "
+                        f"inner={payload['inner_loop_name']} "
                         f"fault={payload['fault_name']} Vbus={payload['vbus']:.2f}V "
                         f"T={payload['temp']:.1f}C"
                     )

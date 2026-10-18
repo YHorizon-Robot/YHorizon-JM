@@ -214,7 +214,8 @@ static void Comm_SendStatus(uint8_t seq)
     vbus_raw = 65535;
   }
   Comm_WriteU16Le(&data[3], (uint16_t)vbus_raw);
-  data[7] = (uint8_t)((Servo_GetCtrlMode() & 0x03U) << 5);
+  data[7] = (uint8_t)(((Servo_GetCtrlMode() & 0x03U) << 5)
+                      | ((Servo_GetInnerLoop() == CFG_INNER_LOOP_CURRENT) ? 0x80U : 0x00U));
   Comm_CacheSend(CFG_CAN_STATUS_BASE + Comm_Nid(), COMM_CMD_GET_STATUS, seq, data);
 }
 
@@ -226,7 +227,7 @@ static void Comm_SendFeedback(void)
   Servo_GetTelemetry(&tel);
   Comm_WriteI32Le(&data[0], Comm_FloatToI32(tel.p_act, CFG_POS_LSB));
   Comm_WriteI16Le(&data[4], Comm_FloatToI16(tel.v_act, CFG_VEL_LSB));
-  /* Voltage firmware: 0.001 pu/LSB in the protocol torque field. */
+  /** t_ref, 0.001 pu/LSB. Voltage loop: Vq. Current loop: Iq_ref = t_ref * I_LIMIT / V_LIMIT. */
   Comm_WriteI16Le(&data[6], Comm_FloatToI16(tel.t_ref, CFG_TORQUE_LSB));
   Comm_SendRaw(CFG_CAN_FB_BASE + Comm_Nid(), data);
 }

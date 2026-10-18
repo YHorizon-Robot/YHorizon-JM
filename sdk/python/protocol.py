@@ -17,6 +17,12 @@ TORQUE_LSB = 0.001
 VBUS_LSB = 0.01
 TEMP_LSB = 0.1
 
+INNER_LOOP_VOLTAGE = 0
+INNER_LOOP_CURRENT = 1
+INNER_LOOP_NAME = {INNER_LOOP_VOLTAGE: "VOLTAGE", INNER_LOOP_CURRENT: "CURRENT"}
+# Firmware CFG_I_LIMIT_A / CFG_V_LIMIT: current loop maps t_ref (pu) to Iq_ref (A).
+CURRENT_A_PER_PU = 5.0 / 0.5
+
 MODE_MOTION = 0x00
 MODE_VELOCITY = 0x01
 MODE_POSITION = 0x02
@@ -241,6 +247,7 @@ def unpack_status(data: bytes) -> dict[str, float | int | str]:
     temp = int.from_bytes(data[5:7], "little", signed=True) * TEMP_LSB
     byte7 = data[7]
     mode = (byte7 >> 5) & 0x03
+    inner = (byte7 >> 7) & 0x01
     return {
         "state": state,
         "state_name": STATE_NAME.get(state, f"0x{state:02X}"),
@@ -250,8 +257,19 @@ def unpack_status(data: bytes) -> dict[str, float | int | str]:
         "temp": temp,
         "mode": mode,
         "mode_name": MODE_NAME.get(mode, f"0x{mode:02X}"),
+        "inner_loop": inner,
+        "inner_loop_name": INNER_LOOP_NAME[inner],
         "warn": byte7 & 0x1F,
     }
+
+
+def torque_physical(t_ref: float, inner_loop: int | None, vbus: float | None) -> tuple[float, str] | None:
+    """Map feedback t_ref (pu) to Vq in V or Iq_ref in A; None if the inner loop is unknown."""
+    if inner_loop == INNER_LOOP_CURRENT:
+        return t_ref * CURRENT_A_PER_PU, "A"
+    if inner_loop == INNER_LOOP_VOLTAGE and vbus is not None and vbus > 0.0:
+        return t_ref * vbus, "V"
+    return None
 
 
 def unpack_cali(data: bytes) -> dict[str, int | str]:

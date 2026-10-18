@@ -4,7 +4,16 @@
 
 Protocol actually implemented by current YHorizon-JM firmware. Classic CAN 2.0, 11-bit ID, DLC = 8, 1 Mbps, little-endian. Motor ID = 1~63. Position and velocity are on the **output shaft** (motor shaft / gear ratio 8).
 
-After power-on calibration or a successful Flash load the drive enters `RUNNING`. There is no `ENABLE` / `DISABLE`. Voltage inner loop by default; `CFG_INNER_LOOP` in `config.h` can select current inner loop. CAN still encodes `t_ref` in voltage units.
+After power-on calibration or a successful Flash load the drive enters `RUNNING`. There is no `ENABLE` / `DISABLE`. Current inner loop by default. If the motor parameters differ and the current loop will not run, set `CFG_INNER_LOOP` in `config.h` to `CFG_INNER_LOOP_VOLTAGE` to switch back to the voltage inner loop.
+
+The frame layout is identical for both inner loops. `t_ref`, the feedforward and the gains all use one per-unit torque command, clamped to `±V_LIMIT`. The firmware interprets it by inner loop:
+
+| Inner loop | Meaning of `t_ref` | Conversion |
+| --- | --- | --- |
+| Voltage | `Vq`, relative to bus voltage | `Vq ≈ t_ref × Vbus` (V) |
+| Current | `Iq` command | `Iq_ref = t_ref × I_LIMIT / V_LIMIT`, default `10 A/pu` |
+
+The active inner loop is reported in `GET_STATUS` Byte7 bit7. Outer-loop gains mean something different under the current loop; retune them when switching from the voltage loop.
 
 ## CAN IDs
 
@@ -28,7 +37,7 @@ Control Mode    0x00 MOTION    0x01 VELOCITY    0x02 POSITION
 Motor State     0x02 RUNNING   0x03 FAULT       0x04 CALIBRATING
 ```
 
-Power-on default is `MOTION`. `SET_CONTROL_MODE` may switch while `RUNNING`; integrators are cleared and voltage is 0 until a valid real-time command for the new mode arrives. The drive executes only real-time frames that match the current mode; others are dropped with no feedback.
+Power-on default is `MOTION`. `SET_CONTROL_MODE` may switch while `RUNNING`; integrators are cleared and `t_ref` is 0 until a valid real-time command for the new mode arrives. The drive executes only real-time frames that match the current mode; others are dropped with no feedback.
 
 If several real-time frames arrive in one RX pass, only the last valid one is applied. There is no timeout: the last frame is held until a new command of the same mode, a mode change, calibration, FAULT, or power-off. To stop, send zero speed / current position, or power down.
 
@@ -44,14 +53,14 @@ Call `SET_CONTROL_MODE` first, then send matching real-time frames. A valid fram
 | --- | --- | --- | --- |
 | 0~3 | Position command | `int32` | `0.0001 rad/LSB` |
 | 4~5 | Velocity command | `int16` | `0.1 rad/s/LSB`; values beyond about `±3276.7` are clamped, then still executed |
-| 6~7 | Voltage FF | `int16` | `raw / 32767` → −1~1 |
+| 6~7 | Torque FF | `int16` | `raw / 32767` → −1~1 pu |
 
 ```text
-t_ref = Kd*(v_set - v_act) + Kp*(p_set - p_act) + Voltage_ff
+t_ref = Kd*(v_set - v_act) + Kp*(p_set - p_act) + t_ff
 t_ref = clamp(t_ref, ±V_LIMIT)
 ```
 
-`V_LIMIT` defaults to 0.50 pu (1.0 = full PWM).
+`V_LIMIT` defaults to 0.50 pu. Under the voltage loop 1.0 pu = full PWM; under the current loop 0.50 pu corresponds to `I_LIMIT` = 5 A.
 
 ### Velocity `0x140 + ID`
 
@@ -79,7 +88,7 @@ A position PID outer loop builds `v_ref` (clamped to `±vmax`), then the velocit
 | --- | --- | --- | --- |
 | 0~3 | Position | `int32` | `0.0001 rad/LSB`, continuous multi-turn |
 | 4~5 | Velocity | `int16` | `0.1 rad/s/LSB` |
-| 6~7 | Voltage command | `int16` | `0.001 pu/LSB` (protocol torque field; no torque sensor) |
+| 6~7 | Torque command `t_ref` | `int16` | `0.001 pu/LSB` (command, not measured torque; convert to V or A by inner loop) |
 
 Reported only after a valid real-time command.
 
@@ -156,7 +165,7 @@ Result  0x00 OK
 | 1~2 | Fault Code `uint16` |
 | 3~4 | Bus voltage `uint16`, `0.01 V/LSB` (measured on PB0) |
 | 5~6 | Temperature, currently 0 |
-| 7 | bits 5~6 = Control Mode; warning bits are 0 |
+| 7 | bits 5~6 = Control Mode; bit 7 = inner loop (0 voltage, 1 current); warning bits 0~4 are 0 |
 
 Only fault bit `bit10 CALIBRATION_FAULT` is used. No unsolicited Fault Event; status is returned only for `GET_STATUS`.
 
@@ -208,4 +217,4 @@ This is a single-axis Classic CAN 1 Mbps protocol. Planned next:
 - **CAN FD** after moving the MCU to **GD32C113**
 - Multi-axis sync (shared clock / sync frames, batched position or impedance)
 - `ENABLE` / `DISABLE` and fuller fault detection (over-current, over-voltage, over-temperature, stall)
-- Torque-unit feedback and unsolicited Fault Events
+- Measured torque (Nm) feedback and unsolicited Fault Events

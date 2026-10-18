@@ -62,17 +62,28 @@ extern "C" {
  * @name Inner loop
  * @brief Outer motion/vel/pos always compute t_ref. Voltage: t_ref is Vq.
  *        Current: t_ref is mapped to Iq_ref, Id/Iq PI outputs Vd/Vq.
- *        Sampling always runs; default control stays voltage.
+ *        Sampling always runs. Default is the current loop. If the motor R/L
+ *        differ from WK4310, set @ref CFG_INNER_LOOP to @ref CFG_INNER_LOOP_VOLTAGE.
  */
 /** @{ */
 #define CFG_INNER_LOOP_VOLTAGE      (0U)
 #define CFG_INNER_LOOP_CURRENT      (1U)
-#define CFG_INNER_LOOP              CFG_INNER_LOOP_VOLTAGE
+#define CFG_INNER_LOOP              CFG_INNER_LOOP_CURRENT
 #define CFG_SHUNT_OHM               (0.001f)
 #define CFG_CSA_GAIN                (20.0f)
-#define CFG_I_LIMIT_A               (5.0f)  
+#define CFG_I_LIMIT_A               (5.0f)
 #define CFG_CUR_BW_HZ               (500.0f)
-#define CFG_ADC_I_TRIG_TICKS        (224U)     /* ~2 us after valley at 112 MHz */
+/**
+ * @brief Minimum ticks after the latest low-side turn-on before the current trigger.
+ *        112 ticks is 1 µs at 112 MHz, including the ~98 ns dead time.
+ */
+#define CFG_ADC_I_BLANK_TICKS       (112U)
+/**
+ * @brief Ticks from the CH3 match until the CURB sample-and-hold ends.
+ *        Injected channels use 1.5-cycle sampling: 1.5 + 12.5 + 1.5 ADC cycles.
+ *        ADCCLK is APB2/8, so each ADC cycle is 8 timer ticks.
+ */
+#define CFG_ADC_I_SAMPLE_END_TICKS  (124U)
 #define CFG_ADC_I_OFFSET_SAMPLES    (32U)
 /** @} */
 

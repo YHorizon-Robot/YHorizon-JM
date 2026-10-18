@@ -20,7 +20,7 @@ import protocol as proto
 def parse_args() -> argparse.Namespace:
     default_interface = can_backends.default_interface()
     default_channel = can_backends.default_channel(default_interface)
-    parser = argparse.ArgumentParser(description="YHorizon-JM voltage servo host")
+    parser = argparse.ArgumentParser(description="YHorizon-JM servo host")
     parser.add_argument("--interface", default=default_interface, help="python-can interface")
     parser.add_argument("--channel", default=default_channel, help="CAN channel / slcan device")
     parser.add_argument("--list-can", action="store_true", help="list detected CAN channels and exit")
@@ -30,7 +30,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--vel", type=float, default=0.0, help="target velocity rad/s")
     parser.add_argument("--kp", type=float, default=0.0)
     parser.add_argument("--kd", type=float, default=0.0)
-    parser.add_argument("--ff", type=float, default=0.0, help="voltage feedforward -1..1")
+    parser.add_argument("--ff", type=float, default=0.0, help="torque feedforward pu -1..1")
     parser.add_argument("--rate", type=float, default=200.0, help="motion TX rate Hz")
     parser.add_argument("--listen", action="store_true", help="only parse bus frames")
     parser.add_argument("--once", action="store_true", help="send setup + one motion frame, then exit")
@@ -115,7 +115,10 @@ def main() -> int:
                 )
             elif msg.arbitration_id == ids["status"]:
                 st = proto.unpack_status(bytes(msg.data))
-                print(f"status {st['state_name']} fault={st['fault_name']} mode={st['mode_name']}")
+                print(
+                    f"status {st['state_name']} fault={st['fault_name']} mode={st['mode_name']} "
+                    f"inner={st['inner_loop_name']} vbus={st['vbus']:.2f}V"
+                )
     except KeyboardInterrupt:
         return 0
     finally:

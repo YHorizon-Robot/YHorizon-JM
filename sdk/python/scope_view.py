@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 CHANNELS = (
     ("pos", "位置", "rad", "#4fc3f7"),
     ("vel", "速度", "rad/s", "#69f0ae"),
-    ("volt", "电压", "pu", "#ffab40"),
+    ("volt", "力矩指令", "pu", "#ffab40"),
 )
 
 _CAP = 65536

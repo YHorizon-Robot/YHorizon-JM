@@ -46,9 +46,9 @@
 | MCU | GD32F303CCT6，112 MHz |
 | 功率级 | FD6288 三相驱动 |
 | 总线 | Classic CAN 2.0，1 Mbps，Motor Protocol V1.0 |
-| 控制 | 默认电压内环；可选电流内环。运控 / 速度 / 位置三模式 |
+| 控制 | 默认电流内环；可改电压内环。运控 / 速度 / 位置三模式 |
 
-上电校准或加载 Flash 参数后进入运控。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
+上电校准或加载 Flash 参数后进入运控。电流环 PI 按仓库里的 WK4310 相电阻、相电感整定。买到的电机参数可能不一样，电流环跑不通时，把 `firmware/App/config.h` 的 `CFG_INNER_LOOP` 改成 `CFG_INNER_LOOP_VOLTAGE`，重新编译即可切回电压内环。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
 
 测试视频：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
 

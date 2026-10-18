@@ -46,9 +46,9 @@ Integrated joint with a planetary gearbox. First-revision mechanics and electron
 | MCU | GD32F303CCT6, 112 MHz |
 | Power stage | FD6288 three-phase driver |
 | Bus | Classic CAN 2.0, 1 Mbps, Motor Protocol V1.0 |
-| Control | Voltage inner loop by default; current inner loop optional. Motion / velocity / position modes |
+| Control | Current inner loop by default; voltage inner loop optional. Motion / velocity / position modes |
 
-After power-on calibration or loading Flash parameters, the drive enters motion control. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
+After power-on calibration or loading Flash parameters, the drive enters motion control. The current PI uses the WK4310 phase resistance and inductance in this repo. A purchased motor may not match those parameters. If the current loop will not run, set `CFG_INNER_LOOP` in `firmware/App/config.h` to `CFG_INNER_LOOP_VOLTAGE` and rebuild to switch back to the voltage inner loop. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
 
 Test video: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
 

@@ -111,8 +111,13 @@ void Adc_Init(void)
   adc_external_trigger_config(ADC0, ADC_ROUTINE_CHANNEL, ENABLE);
 
   adc_channel_length_config(ADC0, ADC_INSERTED_CHANNEL, 2U);
-  adc_inserted_channel_config(ADC0, 0U, ADC_CHANNEL_0, ADC_SAMPLETIME_13POINT5);
-  adc_inserted_channel_config(ADC0, 1U, ADC_CHANNEL_1, ADC_SAMPLETIME_13POINT5);
+  /**
+   * 1.5-cycle sampling matches @ref CFG_ADC_I_SAMPLE_END_TICKS. A longer
+   * aperture does not fit the low-side window at @ref CFG_V_LIMIT.
+   */
+  adc_inserted_channel_config(ADC0, 0U, ADC_CHANNEL_0, ADC_SAMPLETIME_1POINT5);
+  adc_inserted_channel_config(ADC0, 1U, ADC_CHANNEL_1, ADC_SAMPLETIME_1POINT5);
+  adc_special_function_config(ADC0, ADC_SCAN_MODE, ENABLE);
   adc_external_trigger_source_config(ADC0, ADC_INSERTED_CHANNEL,
                                      ADC0_1_2_EXTTRIG_INSERTED_NONE);
   adc_external_trigger_config(ADC0, ADC_INSERTED_CHANNEL, ENABLE);
