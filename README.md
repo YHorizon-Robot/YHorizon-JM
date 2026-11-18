@@ -45,7 +45,7 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 | --- | --- |
 | 外形 | 直径 57 mm，厚度 52 mm |
 | 重量 | 约 300 g |
-| 电机 | WK4310 参数，14 对极 |
+| 电机 | 无框电机 WK4310H，14 对极 |
 | 减速 | 行星减速机，减速比 8 |
 | 扭矩 | 额定 3 Nm，最大 6 Nm |
 | 供电 | 最高 48 V |
@@ -55,7 +55,7 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 | 总线 | Classic CAN 2.0，1 Mbps，Motor Protocol V1.0 |
 | 控制 | 默认电流内环；可改电压内环。运控 / 速度 / 位置三模式 |
 
-上电校准或加载 Flash 参数后进入运控。电流环 PI 按仓库里的 WK4310 相电阻、相电感整定。买到的电机参数可能不一样，电流环跑不通时，把 `firmware/App/config.h` 的 `CFG_INNER_LOOP` 改成 `CFG_INNER_LOOP_VOLTAGE`，重新编译即可切回电压内环。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
+上电校准或加载 Flash 参数后进入运控。电流环 PI 按仓库里的 WK4310H 相电阻、相电感整定。买到的电机参数可能不一样，电流环跑不通时，把 `firmware/App/config.h` 的 `CFG_INNER_LOOP` 改成 `CFG_INNER_LOOP_VOLTAGE`，重新编译即可切回电压内环。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
 
 测试视频：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
 
@@ -68,7 +68,7 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 - 机械零件与外购件：[`mechanical/bom/组装购买清单.xlsx`](mechanical/bom/组装购买清单.xlsx)
 - 驱动器元器件：[`hardware/bom/BOM_YHorizon-JM.xlsx`](hardware/bom/BOM_YHorizon-JM.xlsx)
 
-PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2)。打板也可用 [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip)，原理图 PDF 见 [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf)。交流可加 QQ 群 **1124721315**。
+PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2)。打板也可用 [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip)，原理图 PDF 见 [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf)。交流可加 QQ 群 **1065885316**。
 
 装配体 STEP：[`mechanical/asm/YHorizon-JM-asm.STEP`](mechanical/asm/YHorizon-JM-asm.STEP)。CNC 零件在 `mechanical/cnc/`。**CNC 加工不保证和我们完全一致，建议多试、按自己的加工结果修改孔位。** 下单前请对照螺纹孔注意事项：
 
@@ -84,13 +84,13 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
   CNC 下单注意事项（螺纹孔）
 </p>
 
-也可以买一份我们整理的多余零部件套件，省去自己打板和配齿轮、螺丝：成品驱动板、减速机齿轮和部分螺丝等。预售在闲鱼（口令 **CZ225**）：[套件链接](https://m.tb.cn/h.8FFGGjp?tk=cgNcTkelna0)。
+也可以在闲鱼上买我们整理的 YHorizon 套件，一共 50 套（口令 **CZ007**）：[闲鱼链接](https://m.tb.cn/h.jNge4x4?tk=GeXY6fdh1uc)。
 
 <p align="center">
-  <img src="images/xianyu.jpeg" alt="闲鱼套件页面" width="35%"/>
+  <img src="images/xianyu.jpeg" alt="闲鱼 YHorizon 套件页面" width="35%"/>
 </p>
 <p align="center">
-  闲鱼套件页面
+  闲鱼 YHorizon 套件页面
 </p>
 
 清单之外需要自己准备的工具（不限于）：

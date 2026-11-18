@@ -11,7 +11,7 @@ extern "C" {
 #define CFG_POLE_PAIRS              (14U)
 
 /**
- * @name Motor electrical (WK4310)
+ * @name Motor electrical (WK4310H)
  * @brief Datasheet line-to-line R/L, halved to star phase for the current PI.
  *        Set @ref CFG_VBUS_NOMINAL_V to 24 or 48; PI also tracks measured Vbus.
  */
@@ -63,7 +63,7 @@ extern "C" {
  * @brief Outer motion/vel/pos always compute t_ref. Voltage: t_ref is Vq.
  *        Current: t_ref is mapped to Iq_ref, Id/Iq PI outputs Vd/Vq.
  *        Sampling always runs. Default is the current loop. If the motor R/L
- *        differ from WK4310, set @ref CFG_INNER_LOOP to @ref CFG_INNER_LOOP_VOLTAGE.
+ *        differ from WK4310H, set @ref CFG_INNER_LOOP to @ref CFG_INNER_LOOP_VOLTAGE.
  */
 /** @{ */
 #define CFG_INNER_LOOP_VOLTAGE      (0U)

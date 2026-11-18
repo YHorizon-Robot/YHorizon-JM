@@ -45,7 +45,7 @@ Integrated joint with a planetary gearbox. First-revision mechanics and electron
 | --- | --- |
 | Envelope | Diameter 57 mm, thickness 52 mm |
 | Mass | About 300 g |
-| Motor | WK4310 parameters, 14 pole pairs |
+| Motor | Frameless WK4310H, 14 pole pairs |
 | Gear | Planetary, ratio 8 |
 | Torque | 3 Nm continuous, 6 Nm peak |
 | Supply | Up to 48 V |
@@ -55,7 +55,7 @@ Integrated joint with a planetary gearbox. First-revision mechanics and electron
 | Bus | Classic CAN 2.0, 1 Mbps, Motor Protocol V1.0 |
 | Control | Current inner loop by default; voltage inner loop optional. Motion / velocity / position modes |
 
-After power-on calibration or loading Flash parameters, the drive enters motion control. The current PI uses the WK4310 phase resistance and inductance in this repo. A purchased motor may not match those parameters. If the current loop will not run, set `CFG_INNER_LOOP` in `firmware/App/config.h` to `CFG_INNER_LOOP_VOLTAGE` and rebuild to switch back to the voltage inner loop. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
+After power-on calibration or loading Flash parameters, the drive enters motion control. The current PI uses the WK4310H phase resistance and inductance in this repo. A purchased motor may not match those parameters. If the current loop will not run, set `CFG_INNER_LOOP` in `firmware/App/config.h` to `CFG_INNER_LOOP_VOLTAGE` and rebuild to switch back to the voltage inner loop. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
 
 Test video: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
 
@@ -68,7 +68,7 @@ Start with the two BOMs for sourcing parts and fabricating the board. Do not ord
 - Mechanical parts and purchased hardware: [`mechanical/bom/组装购买清单.xlsx`](mechanical/bom/组装购买清单.xlsx)
 - Driver electronics: [`hardware/bom/BOM_YHorizon-JM.xlsx`](hardware/bom/BOM_YHorizon-JM.xlsx)
 
-PCB source (JLCPCB / EasyEDA Pro): [`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2). Gerber files: [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip). Schematic PDF: [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf). Discussion: QQ group **1124721315**.
+PCB source (JLCPCB / EasyEDA Pro): [`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2). Gerber files: [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip). Schematic PDF: [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf). Discussion: QQ group **1065885316**.
 
 Assembly STEP: [`mechanical/asm/YHorizon-JM-asm.STEP`](mechanical/asm/YHorizon-JM-asm.STEP). CNC parts are in `mechanical/cnc/`. **CNC parts are not guaranteed to match ours; try fits and adjust hole positions to your own machining.** Check the threaded-hole notes before ordering:
 
@@ -84,13 +84,13 @@ Assembly STEP: [`mechanical/asm/YHorizon-JM-asm.STEP`](mechanical/asm/YHorizon-J
   CNC order notes (threaded holes)
 </p>
 
-There is also a convenience kit of leftover parts from the authors: a finished driver board, reducer gears, and some screws, so you do not have to fabricate the PCB or source those pieces yourself. Presale is on Xianyu (code **CZ225**): [kit listing](https://m.tb.cn/h.8FFGGjp?tk=cgNcTkelna0).
+The YHorizon kit we put together is also on Xianyu, 50 sets (code **CZ007**): [Xianyu listing](https://m.tb.cn/h.jNge4x4?tk=GeXY6fdh1uc).
 
 <p align="center">
-  <img src="images/xianyu.jpeg" alt="Xianyu kit listing" width="35%"/>
+  <img src="images/xianyu.jpeg" alt="Xianyu YHorizon kit listing" width="35%"/>
 </p>
 <p align="center">
-  Xianyu kit listing
+  Xianyu YHorizon kit listing
 </p>
 
 You also need tools that are not on the BOM, including:
