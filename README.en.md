@@ -5,16 +5,16 @@
 <!--
 YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD (CNC part STEP, assembly STEP, gear drawings), electronics (EasyEDA Pro / JLCPCB source project, schematic, Gerber, BOM), GD32F303 FOC firmware, and a Python host SDK. It can be fully replicated.
 Specs: 57 mm diameter, 52 mm thick, about 300 g, 8:1 planetary gearbox, 3 Nm continuous, 6 Nm peak, up to 48 V, Classic CAN 1 Mbps.
-Non-commercial study and exchange only. Sharing, reposting, recommending, and promoting this project is welcome. For commercial cooperation, contact WeChat Yet_Latitude.
-YHorizon-JM 是一个源文件完全公开的开源关节电机，仅限非商业使用，欢迎转发、分享和宣传。
+Software is GPLv3. Hardware and project documentation are CERN-OHL-S. Both allow commercial use when their obligations are met. For closed-source use, contact WeChat Yet_Latitude for a separate commercial license. Sharing, reposting, recommending, and promoting this project is welcome.
+YHorizon-JM 的软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，遵守开源义务即可商用。希望闭源使用的，请联系微信 Yet_Latitude。欢迎转发、分享和宣传。
 -->
 
 Open-source joint motor. The firmware, SDK, and tools in this repository target the first prototype: voltage-mode servo, Classic CAN, GD32F303 driver board.
 
-> **This project is for study and technical exchange only.**
+> **This project is published under open-source licenses.**
 > Mechanical, electronics, firmware, and SDK sources are all published.
+> GPLv3 and CERN-OHL-S allow commercial use when their obligations are met. For closed-source use, take a separate [commercial license](#commercial-cooperation).
 > It does not guarantee reliability or safety, and it is not a product certification or quality commitment.
-> **Commercial use of the designs, firmware, SDK, or documentation in this repository by others is prohibited.** For commercial needs, see [Commercial cooperation](#commercial-cooperation).
 > Anyone who uses this project assumes the risk of personal injury, equipment damage, and other loss. See [SECURITY.en.md](SECURITY.en.md).
 
 <p align="center">
@@ -105,7 +105,7 @@ Videos:
 - Test: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
 - Full assembly: [Douyin assembly video](https://v.douyin.com/Lvc5RXRxO6M/)
 
-Replication is for study only. Commercial use is not allowed (see [Commercial cooperation](#commercial-cooperation)). Read [SECURITY.en.md](SECURITY.en.md) before assembly or power-up.
+You may replicate, manufacture, and sell under the open-source licenses, provided you meet the GPLv3 and CERN-OHL-S obligations. To keep derivative work closed, use [Commercial cooperation](#commercial-cooperation). Read [SECURITY.en.md](SECURITY.en.md) before assembly or power-up.
 
 ## Layout
 
@@ -164,18 +164,19 @@ CLI example: `python servo_host.py --interface socketcan --channel can0 --id 1 -
 
 ## Commercial cooperation
 
-This is the open-source edition. **It may not be used commercially, and we do not recommend it.** Some design choices were made for learning, easy machining, and low cost, so it is not suited to commercial products or mass production.
+The open-source licenses allow commercial use if copyleft derivatives stay public. The design favors learning, easy machining, and low cost, so it is a poor fit for a mass-produced product as it stands.
 
-For commercial needs, contact me on WeChat: **Yet_Latitude**. We are open to many forms of cooperation.
+For integration, manufacture, or sale without releasing your modifications, contact WeChat **Yet_Latitude** for a commercial license. The template is [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md). An unsigned template grants nothing and does not change the rights already given by the open-source licenses.
 
 ## License
 
-Dual license, see [`LICENSE`](LICENSE). **Sources are fully published. Regardless of which license applies to a given path, this project is for study and exchange only. Commercial use by others is prohibited.**
+Dual license, see [`LICENSE`](LICENSE). The open-source licenses allow commercial use when their obligations are met. The commercial license is a separate path and takes effect only after it is agreed in writing.
 
 | Content | License | Notes |
 | --- | --- | --- |
-| `mechanical/`, `hardware/` | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) | Non-commercial; derivatives must use the same license and give credit |
-| `firmware/`, `sdk/`, `tools/` | [GPLv3](LICENSES/GPL-3.0.txt) | Study, modify, and share; derivatives must remain GPLv3 |
+| `mechanical/`, `hardware/`, `images/`, and accompanying project documentation | [CERN-OHL-S-2.0](LICENSES/CERN-OHL-S-2.0.txt) | Strongly reciprocal open-hardware license. Manufacture and sale are allowed; conveyed products or modified designs must ship the design materials CERN-OHL-S requires |
+| `firmware/`, `sdk/`, `tools/` | [GPLv3](LICENSES/GPL-3.0.txt) | Commercial use is allowed; distributed derivative software must include complete corresponding source under GPLv3 |
+| Separate agreement | [Commercial license template](COMMERCIAL-LICENSE.md) | For closed-source use that does not follow the obligations above. Contact WeChat Yet_Latitude; nothing is granted before signature |
 
 ## Safety
 

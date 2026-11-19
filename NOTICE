@@ -1,7 +1,9 @@
 YHorizon-JM
 Copyright 2026 YHorizon-JM Authors
 
-mechanical/ and hardware/ are licensed under CC BY-NC-SA 4.0.
-firmware/, sdk/, and tools/ are licensed under GNU GPL v3.0.
+firmware/, sdk/, and tools/ are licensed under GNU GPL v3.0 only.
+mechanical/, hardware/, images/, and accompanying project documentation
+are licensed under CERN-OHL-S-2.0.
 
-See LICENSE and the files in LICENSES/ for the full terms.
+A separate commercial license may be obtained from the copyright holder.
+Contact WeChat Yet_Latitude. See LICENSE and COMMERCIAL-LICENSE.md.

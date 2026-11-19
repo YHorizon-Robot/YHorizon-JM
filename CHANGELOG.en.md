@@ -4,4 +4,5 @@
 
 ## [Unreleased]
 
-- Published EasyEDA Pro source and assembly STEP; commercial use remains prohibited
+- Published EasyEDA Pro source and assembly STEP
+- Relicensed as GPLv3 for software and CERN-OHL-S for hardware and project documentation, with a separate commercial-license template. The open-source licenses allow commercial use when their obligations are met

@@ -5,16 +5,16 @@
 <!--
 YHorizon-JM 是一个源文件完全公开的开源关节电机项目：机械结构（CNC 零件 STEP、装配体 STEP、齿轮图纸）、电控硬件（嘉立创 EDA Pro 源工程、原理图、Gerber、BOM）、GD32F303 FOC 固件和 Python 上位机 SDK 全部公开，可以完整复刻。
 参数：直径 57 mm，厚度 52 mm，约 300 g，行星减速 8:1，额定 3 Nm，峰值 6 Nm，最高 48 V，Classic CAN 1 Mbps。
-仅限非商业的学习与交流使用。欢迎转发、分享、推荐和宣传本项目。商业合作请联系微信 Yet_Latitude。
-YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD, EasyEDA Pro PCB project, schematic, Gerber, BOM, FOC firmware, and Python SDK. Non-commercial use only. Sharing, reposting, and recommending this project is welcome.
+软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，两套许可证都允许在遵守开源义务的前提下商用。希望闭源集成或免除这些义务的，请联系微信 Yet_Latitude 另签商业许可。欢迎转发、分享、推荐和宣传本项目。
+YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD, EasyEDA Pro PCB project, schematic, Gerber, BOM, FOC firmware, and Python SDK. Software is GPLv3; hardware and project documentation are CERN-OHL-S. Both allow commercial use if their obligations are met. A separate commercial license is available via WeChat Yet_Latitude. Sharing, reposting, and recommending this project is welcome.
 -->
 
 开源关节电机。喜欢就请点个Star吧，当前仓库里的固件、SDK 和工具面向第一版样机：Classic CAN、GD32F303 驱动板。
 
-> **本项目仅供交流学习。**
+> **本项目按开源许可证公开。**
 > 机械、电控、固件和 SDK 的源文件已全部公开。
+> GPLv3 与 CERN-OHL-S 允许在遵守开源义务的前提下商用。希望闭源使用的，请另签[商业许可](#商业合作)。
 > 不保证功能可靠、不保证使用安全，也不构成任何产品认证或质量承诺。
-> **禁止他人将本仓库中的设计、固件、SDK 或文档用于商业用途。** 有商业需求请看[商业合作](#商业合作)。
 > 使用本项目造成的人身伤害、设备损坏或其它损失，由使用者自行承担。详见 [SECURITY.md](SECURITY.md)。
 
 <p align="center">
@@ -105,7 +105,7 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 - 测试：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
 - 总装：[抖音装配视频](https://v.douyin.com/Lvc5RXRxO6M/)
 
-复刻仅供交流学习，禁止商用（商业需求见[商业合作](#商业合作)）。装配和上电前请阅读 [SECURITY.md](SECURITY.md)。
+可以按开源许可证复刻、制造和销售，但必须遵守 GPLv3 与 CERN-OHL-S 的公开义务。不想公开衍生作品时，请走[商业合作](#商业合作)。装配和上电前请阅读 [SECURITY.md](SECURITY.md)。
 
 ## 仓库结构
 
@@ -164,18 +164,19 @@ CLI 示例：`python servo_host.py --interface socketcan --channel can0 --id 1 -
 
 ## 商业合作
 
-本项目是开源版本，**不能商用，也不建议商用**。部分设计是为了学习和方便加工、降低成本而做的取舍，不适合直接商用或量产。
+开源许可证允许商用，条件是继续公开受 copyleft 约束的衍生软件和硬件设计。仓库里的结构偏学习、易加工和低成本，不适合直接当作量产产品。
 
-如有商业需求，可以联系我，微信：**Yet_Latitude**。合作方式多样，可以具体沟通。
+希望在不公开修改的情况下集成、制造或销售，请联系微信 **Yet_Latitude** 另签商业许可。模板见 [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md)。未书面签署的模板不会生效，也不改变开源许可证已经给出的权利。
 
 ## 许可证
 
-采用双重许可证，详见 [`LICENSE`](LICENSE)。**源文件已全部公开；无论选用哪套许可证，本项目均仅供交流学习，禁止他人商用。**
+双许可，详见 [`LICENSE`](LICENSE)。开源许可允许在遵守其义务的前提下商用。商业许可是另外一条路径，只在另行书面签署后生效。
 
 | 内容 | 许可证 | 要点 |
 | --- | --- | --- |
-| `mechanical/`、`hardware/` | [CC BY-NC-SA 4.0](LICENSES/CC-BY-NC-SA-4.0.txt) | 禁止商用；衍生作品需同样开源并署名 |
-| `firmware/`、`sdk/`、`tools/` | [GPLv3](LICENSES/GPL-3.0.txt) | 可学习、修改和分发；衍生软件必须继续按 GPLv3 开源 |
+| `mechanical/`、`hardware/`、`images/` 及配套项目文档 | [CERN-OHL-S-2.0](LICENSES/CERN-OHL-S-2.0.txt) | 强互惠开源硬件许可。允许制造和销售；分发产品或修改版设计时，须按 CERN-OHL-S 提供相应设计资料 |
+| `firmware/`、`sdk/`、`tools/` | [GPLv3](LICENSES/GPL-3.0.txt) | 允许商用；分发衍生软件时须以 GPLv3 提供完整对应源码 |
+| 另签 | [商业许可模板](COMMERCIAL-LICENSE.md) | 用于不按上述开源义务闭源使用的情形。联系微信 Yet_Latitude；签署前不生效 |
 
 
 ## 安全

@@ -1,37 +1,59 @@
-YHorizon-JM uses a dual license.
+YHorizon-JM is dual-licensed.
 
-Mechanical design (mechanical/) and electronics (hardware/)
-  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
-  (CC BY-NC-SA 4.0, non-commercial)
-  Full text: LICENSES/CC-BY-NC-SA-4.0.txt
-  https://creativecommons.org/licenses/by-nc-sa/4.0/
+Open-source license
+  firmware/, sdk/, and tools/
+    GNU General Public License v3.0 only (GPL-3.0-only)
+    Full text: LICENSES/GPL-3.0.txt
+    https://www.gnu.org/licenses/gpl-3.0.html
 
-Embedded software, host SDK, and tools (firmware/, sdk/, tools/)
-  GNU General Public License v3.0
-  Full text: LICENSES/GPL-3.0.txt
-  https://www.gnu.org/licenses/gpl-3.0.html
+  mechanical/, hardware/, images/, and project documentation
+  that is not part of the software directories above
+    CERN Open Hardware Licence Version 2 - Strongly Reciprocal
+    (CERN-OHL-S-2.0)
+    Full text: LICENSES/CERN-OHL-S-2.0.txt
+    https://cern.ch/cern-ohl
 
-Documentation and other unspecified content default to CC BY-NC-SA 4.0.
-Third-party files keep their own licenses if stated in place.
+  Both open-source licenses allow commercial use. They also require
+  reciprocation: software derivatives distributed under GPLv3 must
+  ship complete corresponding source under GPLv3, and hardware
+  designs and products conveyed under CERN-OHL-S must make the
+  required design materials available under CERN-OHL-S.
 
-The authors additionally restrict the project to non-commercial study
-and exchange. Commercial use by others is not permitted.
+Commercial license
+  A separate commercial license is available from the copyright holder
+  for use that does not follow the open-source obligations above,
+  including closed-source integration, manufacture, and sale.
+  Contact WeChat Yet_Latitude. The template is COMMERCIAL-LICENSE.md.
+  That template grants nothing until the copyright holder agrees to it
+  in writing. It does not add restrictions to GPLv3 or CERN-OHL-S.
+
+Third-party files keep their own licenses when those licenses are
+stated in the file or its directory.
 
 ---
 
-YHorizon-JM 使用双重许可证。
+YHorizon-JM 采用双许可。
 
-机械结构（mechanical/）和电控硬件（hardware/）
-  Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International
-  （CC BY-NC-SA 4.0，禁止商用）
-  全文见 LICENSES/CC-BY-NC-SA-4.0.txt
-  https://creativecommons.org/licenses/by-nc-sa/4.0/
+开源许可
+  firmware/、sdk/、tools/
+    GNU General Public License v3.0 only（GPL-3.0-only）
+    全文见 LICENSES/GPL-3.0.txt
+    https://www.gnu.org/licenses/gpl-3.0.html
 
-嵌入式软件、上位机 SDK 与工具（firmware/、sdk/、tools/）
-  GNU General Public License v3.0
-  全文见 LICENSES/GPL-3.0.txt
-  https://www.gnu.org/licenses/gpl-3.0.html
+  mechanical/、hardware/、images/，以及不属于上述软件目录的项目文档
+    CERN Open Hardware Licence Version 2 - Strongly Reciprocal
+    （CERN-OHL-S-2.0）
+    全文见 LICENSES/CERN-OHL-S-2.0.txt
+    https://cern.ch/cern-ohl
 
-文档与未另行声明的内容，默认按 CC BY-NC-SA 4.0。
+  两套开源许可证都允许商业使用，同时要求互惠：按 GPLv3 分发的软件
+  衍生作品必须以 GPLv3 提供完整对应源码；按 CERN-OHL-S 分发的硬件
+  设计或产品，必须按 CERN-OHL-S 提供该许可证所要求的设计资料。
+
+商业许可
+  希望不按上述开源义务使用，包括闭源集成、制造和销售的，可以向
+  著作权人另签商业许可。联系微信 Yet_Latitude。模板见
+  COMMERCIAL-LICENSE.md。在著作权人书面同意之前，该模板不授予任何
+  权利，也不给 GPLv3 或 CERN-OHL-S 增加限制。
+
 第三方文件若自带许可证，以该文件或其所在目录的说明为准。
-

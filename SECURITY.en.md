@@ -2,7 +2,7 @@
 
 [中文](SECURITY.md) | [English](SECURITY.en.md)
 
-Mechanical designs, electronics, firmware, SDK, tools, and documentation in this repository (the "Project") are provided for study and technical exchange only. Publishing this material does not mean the authors or contributors offer a product, support, training, or any warranty.
+Mechanical designs, electronics, firmware, SDK, tools, and documentation in this repository (the "Project") are provided under the open-source licenses in [`LICENSE`](LICENSE). Publishing this material does not mean the authors or contributors offer a product, support, training, or any warranty.
 
 ## Disclaimer
 
@@ -10,9 +10,9 @@ Mechanical designs, electronics, firmware, SDK, tools, and documentation in this
 - A joint motor can produce enough torque in a short time to crush a hand, throw a fixture, or damage a gearbox. Wrong wiring, wrong parameters, missing calibration, or failed protection can cause personal injury and property damage.
 - Anyone who machines, assembles, flashes, tests, modifies, or integrates the Project does so at their own risk. Authors and contributors are not liable for direct, indirect, incidental, or consequential damages, including but not limited to personal injury, equipment damage, data loss, downtime, and commercial loss.
 - The Project is not a certified industrial product. Before using it in a humanoid, cobot, near-person setting, vehicle, or any system that could cause harm, the user must complete their own risk assessment, testing, and safety measures.
-- **Commercial use of the Project is prohibited.** Production, sale, paid integration, or other use for profit is outside the authors' authorization. Study, experiment, and open-source collaboration are the intended uses. This is the open-source edition; some design choices favor learning, easy machining, and low cost, so it is not suited to commercial products or mass production. For commercial needs, contact WeChat **Yet_Latitude**; cooperation terms are open to discussion.
+- The open-source licenses allow commercial use when the GPLv3 and CERN-OHL-S obligations are met. This file describes risk and disclaimer only. It adds no further restriction to those licenses. For closed-source integration, or to be released from the open-source obligations, contact WeChat **Yet_Latitude** for a commercial license. The template is [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md). Some design choices favor learning, easy machining, and low cost, so the design is a poor fit for mass production as it stands.
 
-Using, copying, modifying, or distributing the Project means you have read and accepted these terms. Full licenses: [`LICENSE`](LICENSE).
+Using the Project means you have read the risks above. License terms are in [`LICENSE`](LICENSE). This file does not modify the open-source licenses.
 
 ## Before use
 
