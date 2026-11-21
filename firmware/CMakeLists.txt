@@ -21,36 +21,26 @@ project(${CMAKE_PROJECT_NAME} C ASM)
 set(CMAKE_C_FLAGS_RELEASE        "-O2 -g0 -DNDEBUG" CACHE STRING "Release C flags" FORCE)
 set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG" CACHE STRING "RelWithDebInfo C flags" FORCE)
 
+set(YFOC_BOARD "YH_JM" CACHE STRING "Board directory under Boards/")
+set(YFOC_FACTORY_TEST OFF CACHE BOOL "Build the factory self-test instead of the servo")
+
+if(NOT YFOC_BOARD STREQUAL "YH_JM")
+    message(FATAL_ERROR "This repository only builds YH_JM (got '${YFOC_BOARD}')")
+endif()
+
+set(YFOC_BOARD_DIR "${CMAKE_CURRENT_SOURCE_DIR}/Boards/${YFOC_BOARD}")
+if(NOT EXISTS "${YFOC_BOARD_DIR}/board.cmake")
+    message(FATAL_ERROR "Unknown board '${YFOC_BOARD}' (missing ${YFOC_BOARD_DIR}/board.cmake)")
+endif()
+include("${YFOC_BOARD_DIR}/board.cmake")
+
 add_executable(${CMAKE_PROJECT_NAME})
 
-set(GD32_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/Drivers/GD32F30x")
-set(GD32_CMSIS "${GD32_ROOT}/CMSIS")
-set(GD32_SPL   "${GD32_ROOT}/GD32F30x_standard_peripheral")
+include("${CMAKE_CURRENT_SOURCE_DIR}/Port/${YFOC_PORT}/port.cmake")
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
-    Hw/startup_gd32f30x_hd.S
-    ${GD32_CMSIS}/GD/GD32F30x/Source/system_gd32f30x.c
-    ${GD32_CMSIS}/GD/GD32F30x/Source/syscalls.c
-    Hw/board.c
-    Hw/irq.c
-    Hw/pwm.c
-    Hw/encoder.c
-    Hw/can.c
-    Hw/debug.c
-    Hw/adc.c
     Hw/RTT/SEGGER_RTT.c
     Hw/RTT/SEGGER_RTT_printf.c
-
-    ${GD32_SPL}/Source/gd32f30x_adc.c
-    ${GD32_SPL}/Source/gd32f30x_can.c
-    ${GD32_SPL}/Source/gd32f30x_dbg.c
-    ${GD32_SPL}/Source/gd32f30x_fmc.c
-    ${GD32_SPL}/Source/gd32f30x_gpio.c
-    ${GD32_SPL}/Source/gd32f30x_misc.c
-    ${GD32_SPL}/Source/gd32f30x_pmu.c
-    ${GD32_SPL}/Source/gd32f30x_rcu.c
-    ${GD32_SPL}/Source/gd32f30x_spi.c
-    ${GD32_SPL}/Source/gd32f30x_timer.c
 
     Foc/foc_math.c
     Foc/foc_svpwm.c
@@ -62,24 +52,31 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/servo.c
     App/cali.c
     App/cali_nv.c
+    App/commission.c
+    App/multi_axis.c
     App/comm.c
     App/node.c
+)
+
+if(YFOC_FACTORY_TEST)
+    target_sources(${CMAKE_PROJECT_NAME} PRIVATE App/factory.c)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE CFG_FACTORY_TEST=1)
+endif()
+
+target_include_directories(${CMAKE_PROJECT_NAME} BEFORE PRIVATE
+    "${YFOC_BOARD_DIR}"
 )
 
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App
     Foc
-    Hw
+    Hw/include
     Hw/RTT
-    ${GD32_CMSIS}
-    ${GD32_CMSIS}/GD/GD32F30x/Include
-    ${GD32_SPL}/Include
 )
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
-    GD32F30X_HD
-    USE_STDPERIPH_DRIVER
-    HXTAL_VALUE=32000000
+    CFG_COMMISSION=1
+    CFG_MULTIAXIS=1
     $<$<CONFIG:Debug>:DEBUG>
 )
 
@@ -89,20 +86,9 @@ set_source_files_properties(
     Foc/foc_encoder.c
     Foc/foc_vernier.c
     Foc/foc_current.c
-    Hw/encoder.c
-    Hw/pwm.c
     App/servo.c
     PROPERTIES
         COMPILE_OPTIONS "$<$<CONFIG:Release,RelWithDebInfo>:-O3;-fno-math-errno;-fno-trapping-math>"
-)
-
-file(TO_CMAKE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/Hw/gd32f30x_flash.ld" YHJM_LINKER_SCRIPT)
-target_link_options(${CMAKE_PROJECT_NAME} PRIVATE
-    -T "${YHJM_LINKER_SCRIPT}"
-    "LINKER:-Map=${CMAKE_PROJECT_NAME}.map"
-)
-set_target_properties(${CMAKE_PROJECT_NAME} PROPERTIES
-    LINK_DEPENDS "${YHJM_LINKER_SCRIPT}"
 )
 
 target_link_libraries(${CMAKE_PROJECT_NAME} m)

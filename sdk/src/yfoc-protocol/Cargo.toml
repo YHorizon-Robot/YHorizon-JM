@@ -1,0 +1,8 @@
+[package]
+name = "yfoc-protocol"
+version = "0.1.0"
+edition = "2021"
+description = "Motor CAN Protocol V1.0 pack and unpack helpers"
+license = "GPL-3.0-only"
+
+[dependencies]

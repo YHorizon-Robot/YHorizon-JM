@@ -1,0 +1,13 @@
+[package]
+name = "yfoc-motor-sdk"
+version = "0.1.0"
+edition = "2021"
+description = "Rust SDK for YHorizon-JM joint motors over classical CAN"
+license = "GPL-3.0-only"
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+yfoc-can = { path = "../yfoc-can" }
+yfoc-protocol = { path = "../yfoc-protocol" }

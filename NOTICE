@@ -1,7 +1,7 @@
 YHorizon-JM
 Copyright 2026 YHorizon-JM Authors
 
-firmware/, sdk/, and tools/ are licensed under GNU GPL v3.0 only.
+firmware/, host-rs/, sdk/, and tools/ are licensed under GNU GPL v3.0 only.
 mechanical/, hardware/, images/, and accompanying project documentation
 are licensed under CERN-OHL-S-2.0.
 

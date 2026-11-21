@@ -190,7 +190,7 @@ function Install-YhjmOpenOcd {
 
 function Install-YhjmHost {
     if ($SkipHost) { return }
-    Write-YhjmStep "Python SDK (servo_gui)"
+    Write-YhjmStep "RS05 / DM4310 joint_gui (Python)"
     $py = Find-YhjmPython
     if (-not $py) {
         $winget = Get-Command winget -ErrorAction SilentlyContinue
@@ -287,7 +287,14 @@ Write-Host ""
 Write-Host "Next:"
 Write-Host "  .\tools\build.ps1"
 Write-Host "  .\tools\flash.ps1          # CMSIS-DAP + SWD"
-Write-Host "  .\sdk\python\.venv\Scripts\python.exe .\sdk\python\servo_gui.py"
+if (-not (Get-Command cargo -ErrorAction SilentlyContinue)) {
+    Write-Host "  Install Rust: https://rustup.rs    # host-rs and the communication SDK"
+}
+else {
+    Write-Host "  cargo build --release --locked --manifest-path host-rs/Cargo.toml -p yfoc-host"
+    Write-Host "  python sdk/build_native.py"
+}
+Write-Host "  .\host-rs\target\release\yfoc-host.exe"
 Write-Host "Windows PCAN needs PCAN-Basic: https://www.peak-system.com/PCAN-Basic.239.0.html"
 
 if ($Build) {

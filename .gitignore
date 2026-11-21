@@ -54,3 +54,11 @@ secrets.*
 tools/toolchain/
 tools/env.ps1
 tools/env.sh
+
+# Rust host and SDK build output
+host-rs/target/
+sdk/target/
+sdk/lib/
+
+# Docs
+docs/

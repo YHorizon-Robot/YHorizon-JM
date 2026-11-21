@@ -51,6 +51,28 @@ static float Foc_EncoderMechFromElecVel(const Foc_Encoder_t *encoder, float omeg
   return omega_e / (float)encoder->pole_pairs;
 }
 
+/**
+ * @brief 由整圈数和单圈角度合成多圈角度。
+ *
+ * 多圈角度到几十弧度以后，float 的最小刻度和一个编码器计数相当，逐周期累加增量
+ * 会让每一步都按同一方向舍入，位置比例误差可到 0.5%。整圈数单独用整数记，
+ * 多圈角度每次重新合成，误差不累积。
+ */
+static void Foc_EncoderCompose(Foc_Encoder_t *encoder)
+{
+  encoder->mech_unwrapped = ((float)encoder->mech_turns * FOC_TWO_PI) + encoder->mech_wrapped;
+}
+
+/**
+ * @brief 把给定的多圈角度拆成整圈数，单圈部分以当前 mech_wrapped 为准。
+ */
+static void Foc_EncoderSplit(Foc_Encoder_t *encoder, float unwrapped_rad)
+{
+  encoder->mech_turns = (int32_t)floorf(
+      ((unwrapped_rad - encoder->mech_wrapped) / FOC_TWO_PI) + 0.5f);
+  Foc_EncoderCompose(encoder);
+}
+
 void Foc_EncoderInit(Foc_Encoder_t *encoder, const Foc_EncoderConfig_t *config)
 {
   encoder->pole_pairs = config->pole_pairs;
@@ -59,6 +81,7 @@ void Foc_EncoderInit(Foc_Encoder_t *encoder, const Foc_EncoderConfig_t *config)
   encoder->initialized = 0U;
   encoder->last_raw_mech = 0.0f;
   encoder->mech_wrapped = 0.0f;
+  encoder->mech_turns = 0;
   encoder->mech_unwrapped = 0.0f;
   encoder->mech_zero = 0.0f;
   encoder->last_elec = 0.0f;
@@ -84,6 +107,7 @@ void Foc_EncoderReset(Foc_Encoder_t *encoder, float raw_mech_angle_rad)
   const float aligned = Foc_ApplyEncoderDirToMechTheta(raw_mech_angle_rad, encoder->direction);
   encoder->last_raw_mech = raw_mech_angle_rad;
   encoder->mech_wrapped = aligned;
+  encoder->mech_turns = 0;
   encoder->mech_unwrapped = aligned;
   encoder->elec_angle = Foc_WrapAngle0To2Pi(
       ((float)encoder->pole_pairs * aligned) + encoder->electrical_offset_rad);
@@ -97,32 +121,28 @@ void Foc_EncoderSeedAbs(Foc_Encoder_t *encoder, float raw_mech_angle_rad, float 
 {
   encoder->last_raw_mech = raw_mech_angle_rad;
   encoder->mech_wrapped = Foc_ApplyEncoderDirToMechTheta(raw_mech_angle_rad, encoder->direction);
-  encoder->mech_unwrapped = aligned_abs_rad;
+  Foc_EncoderSplit(encoder, aligned_abs_rad);
   encoder->elec_angle = Foc_WrapAngle0To2Pi(
       ((float)encoder->pole_pairs * encoder->mech_wrapped) + encoder->electrical_offset_rad);
   encoder->last_elec = encoder->elec_angle;
   encoder->initialized = 1U;
 }
 
-void Foc_EncoderSyncAbs(Foc_Encoder_t *encoder, float aligned_abs_rad, float period_rad)
+void Foc_EncoderSeedSingleTurn(Foc_Encoder_t *encoder, float raw_mech_angle_rad, float zero_aligned_rad)
 {
-  float target = aligned_abs_rad;
-  float err;
+  Foc_EncoderReset(encoder, raw_mech_angle_rad);
+  /* A single-turn sensor cannot recover the old turn count. Choose the
+   * equivalent directed angle nearest the persistent zero, including when
+   * SET_ZERO was issued after several turns or across the sensor wrap. */
+  Foc_EncoderSplit(encoder, zero_aligned_rad
+                            + Foc_WrapAngleToPi(encoder->mech_wrapped - zero_aligned_rad));
+  encoder->mech_zero = zero_aligned_rad;
+}
 
-  if (encoder->initialized == 0U)
-  {
-    return;
-  }
-  if (period_rad > 0.0f)
-  {
-    const float k = floorf(((encoder->mech_unwrapped - aligned_abs_rad) / period_rad) + 0.5f);
-    target = aligned_abs_rad + (k * period_rad);
-  }
-  err = target - encoder->mech_unwrapped;
-  if ((err > FOC_PI) || (err < -FOC_PI))
-  {
-    encoder->mech_unwrapped = target;
-  }
+void Foc_EncoderShiftTurns(Foc_Encoder_t *encoder, int32_t turns)
+{
+  encoder->mech_turns += turns;
+  Foc_EncoderCompose(encoder);
 }
 
 void Foc_EncoderSetZero(Foc_Encoder_t *encoder)
@@ -148,8 +168,19 @@ void Foc_EncoderPredict(Foc_Encoder_t *encoder, float dt_s)
 
   d_mech = encoder->vel_hat * dt_s;
   d_elec = d_mech * (float)encoder->pole_pairs;
-  encoder->mech_unwrapped += d_mech;
-  encoder->mech_wrapped = Foc_WrapAngle0To2Pi(encoder->mech_wrapped + d_mech);
+  {
+    const float next = encoder->mech_wrapped + d_mech;
+    if (next >= FOC_TWO_PI)
+    {
+      encoder->mech_turns++;
+    }
+    else if (next < 0.0f)
+    {
+      encoder->mech_turns--;
+    }
+    encoder->mech_wrapped = Foc_WrapAngle0To2Pi(next);
+    Foc_EncoderCompose(encoder);
+  }
   encoder->elec_angle = Foc_WrapAngle0To2Pi(encoder->elec_angle + d_elec);
   encoder->last_elec = encoder->elec_angle;
   omega_e = encoder->vel_hat * (float)encoder->pole_pairs;
@@ -175,10 +206,19 @@ uint8_t Foc_EncoderUpdate(Foc_Encoder_t *encoder, float raw_mech_angle_rad, floa
     return 0U;
   }
 
-  delta = Foc_WrapAngleToPi(aligned - encoder->mech_wrapped);
+  /** 单圈角度相邻两次相差超过半圈，说明跨过了 0/2π 接缝。 */
+  delta = aligned - encoder->mech_wrapped;
+  if (delta < -FOC_PI)
+  {
+    encoder->mech_turns++;
+  }
+  else if (delta >= FOC_PI)
+  {
+    encoder->mech_turns--;
+  }
   encoder->last_raw_mech = raw_mech_angle_rad;
   encoder->mech_wrapped = aligned;
-  encoder->mech_unwrapped += delta;
+  Foc_EncoderCompose(encoder);
   encoder->elec_angle = Foc_WrapAngle0To2Pi(
       ((float)encoder->pole_pairs * aligned) + encoder->electrical_offset_rad);
 

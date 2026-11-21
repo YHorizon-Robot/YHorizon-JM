@@ -2,9 +2,11 @@
 
 [中文](Motor%20CAN%20Protocol%20V1.0.md) | [English](Motor%20CAN%20Protocol%20V1.0.en.md)
 
-Protocol actually implemented by current YHorizon-JM firmware. Classic CAN 2.0, 11-bit ID, DLC = 8, 1 Mbps, little-endian. Motor ID = 1~63. Position and velocity are on the **output shaft** (motor shaft / gear ratio 8).
+> This English page is an older summary. Firmware 1.6 frame layouts, `DISABLE`, commissioning (`0x30`–`0x37`), and group sync are specified in the [Chinese protocol](Motor%20CAN%20Protocol%20V1.0.md). Several statements below, including “no DISABLE”, describe earlier firmware and do not match the current build.
 
-After power-on calibration or a successful Flash load the drive enters `RUNNING`. There is no `ENABLE` / `DISABLE`. Current inner loop by default. If the motor parameters differ and the current loop will not run, set `CFG_INNER_LOOP` in `config.h` to `CFG_INNER_LOOP_VOLTAGE` to switch back to the voltage inner loop.
+Protocol summary for YHorizon-JM. Classic CAN 2.0, 11-bit ID, DLC = 8, 1 Mbps, little-endian. Motor ID = 1~63. Position and velocity are on the **output shaft** (motor shaft / gear ratio 8).
+
+After power-on calibration or a successful Flash load the drive enters `RUNNING`. Firmware 1.3 and later implement `DISABLE`. Current inner loop by default. If the motor parameters differ and the current loop will not run, set `CFG_INNER_LOOP` in `config.h` to `CFG_INNER_LOOP_VOLTAGE` to switch back to the voltage inner loop.
 
 The frame layout is identical for both inner loops. `t_ref`, the feedforward and the gains all use one per-unit torque command, clamped to `±V_LIMIT`. The firmware interprets it by inner loop:
 

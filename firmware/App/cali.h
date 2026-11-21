@@ -2,13 +2,14 @@
 #define CALI_H
 
 #include <stdint.h>
+#include "cali_nv.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 uint8_t Cali_Start(void);
-uint8_t Cali_RunCommand(uint8_t seq);
+uint8_t Cali_ApplySaved(const CaliNvData_t *nv);
 
 #ifdef __cplusplus
 }

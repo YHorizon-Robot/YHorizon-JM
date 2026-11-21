@@ -1,0 +1,11 @@
+[package]
+name = "yfoc-flash"
+version = "0.1.0"
+edition = "2021"
+description = "In-process SWD flashing for the YHorizon-JM host"
+license = "GPL-3.0-only"
+
+[dependencies]
+ihex = "3"
+object = "0.36"
+probe-rs = "0.32"

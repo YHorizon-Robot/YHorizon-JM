@@ -1,4 +1,5 @@
 #include "node.h"
+#include "adc.h"
 
 #include "board.h"
 #include "cali_nv.h"
@@ -83,7 +84,7 @@ static void Node_LedRestart(uint8_t id)
   s_led_shown_id = id;
   s_led_ph = LED_PAUSE;
   s_led_left = 0U;
-  s_led_next_ms = HAL_GetTick();
+  s_led_next_ms = Board_GetTickMs();
   Board_LedSet(0U);
 }
 
@@ -282,7 +283,7 @@ void Node_Init(void)
   s_btn_st = NODE_BTN_IDLE;
   s_btn_stable = 0U;
   s_btn_last = Board_ButtonRaw();
-  s_btn_edge_ms = HAL_GetTick();
+  s_btn_edge_ms = Board_GetTickMs();
   Node_LedRestart(s_id);
   Dbg_Printf("node: id=%d\r\n", (int)s_id);
 }
@@ -304,30 +305,31 @@ uint8_t Node_ApplyAndReset(uint8_t new_id)
     return 1U;
   }
 
-  Servo_HoldPosition();
-  Pwm_ApplyDuty(FOC_PWM_NEUTRAL_DUTY, FOC_PWM_NEUTRAL_DUTY, FOC_PWM_NEUTRAL_DUTY);
+  const ServoMode_t previous = Servo_PauseForFlash();
   Can_StopForFlash();
   if (CaliNv_SaveNodeId(new_id) == 0U)
   {
     Can_Restart();
+    Adc_RefreshVbus();
+    Servo_ResumeAfterFlash(previous);
     return 0U;
   }
   Can_Restart();
 
   s_reset_pending = 1U;
-  s_reset_at = HAL_GetTick() + NODE_RESET_DELAY_MS;
+  s_reset_at = Board_GetTickMs() + NODE_RESET_DELAY_MS;
   return 1U;
 }
 
 void Node_Service(uint8_t cali_ok)
 {
-  const uint32_t now = HAL_GetTick();
+  const uint32_t now = Board_GetTickMs();
 
   if (s_reset_pending != 0U)
   {
     if ((int32_t)(now - s_reset_at) >= 0)
     {
-      NVIC_SystemReset();
+      Board_SystemReset();
     }
     return;
   }

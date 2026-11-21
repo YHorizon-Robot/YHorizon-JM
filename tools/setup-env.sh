@@ -99,7 +99,7 @@ if [[ "${SKIP_FLASH}" -eq 0 ]]; then
 fi
 
 if [[ "${SKIP_HOST}" -eq 0 ]]; then
-    yhjm_step "Python SDK (servo_gui)"
+    yhjm_step "RS05 / DM4310 joint_gui (Python)"
     py="$(yhjm_find_python)" || {
         echo "Python 3.10+ not found. Install python3 python3-venv python3-pip, or skip with --skip-host." >&2
         exit 1
@@ -156,6 +156,12 @@ echo
 echo "Next:"
 echo "  ./tools/build.sh"
 echo "  ./tools/flash.sh          # CMSIS-DAP + SWD"
+if ! command -v cargo >/dev/null 2>&1; then
+    echo "  rustup: https://rustup.rs    # host-rs and the communication SDK"
+else
+    echo "  cargo build --release --locked --manifest-path host-rs/Cargo.toml -p yfoc-host"
+    echo "  python3 sdk/build_native.py"
+fi
 echo "  ./tools/run-gui.sh"
 echo "SocketCAN example: sudo ip link set can0 up type can bitrate 1000000"
 echo "If the debugger is not visible, add your user to plugdev/dialout and replug:"

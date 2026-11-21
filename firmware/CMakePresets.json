@@ -3,20 +3,30 @@
     "configurePresets": [
         {
             "name": "gd32f303",
-            "displayName": "GD32F303 voltage-mode servo",
+            "displayName": "YH_JM GD32F303",
             "generator": "Ninja",
             "binaryDir": "${sourceDir}/build/${presetName}",
             "toolchainFile": "${sourceDir}/cmake/gcc-arm-none-eabi.cmake",
             "cacheVariables": {
-                "CMAKE_BUILD_TYPE": "Release"
+                "CMAKE_BUILD_TYPE": "Release",
+                "YFOC_BOARD": "YH_JM",
+                "YFOC_FACTORY_TEST": "OFF"
             }
         },
         {
             "name": "gd32f303-debug",
-            "displayName": "GD32F303 voltage-mode servo (Debug)",
+            "displayName": "YH_JM GD32F303 (Debug)",
             "inherits": "gd32f303",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug"
+            }
+        },
+        {
+            "name": "gd32f303-factory",
+            "displayName": "YH_JM factory test",
+            "inherits": "gd32f303",
+            "cacheVariables": {
+                "YFOC_FACTORY_TEST": "ON"
             }
         }
     ],
@@ -28,6 +38,10 @@
         {
             "name": "gd32f303-debug",
             "configurePreset": "gd32f303-debug"
+        },
+        {
+            "name": "gd32f303-factory",
+            "configurePreset": "gd32f303-factory"
         }
     ]
 }

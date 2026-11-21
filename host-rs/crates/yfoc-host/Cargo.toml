@@ -1,0 +1,20 @@
+[package]
+name = "yfoc-host"
+version = "0.3.0"
+edition = "2021"
+description = "YHorizon-JM cross-platform egui host"
+license = "GPL-3.0-only"
+
+[dependencies]
+clap = { version = "4", features = ["derive"] }
+ctrlc = "3"
+crc32fast = "1"
+eframe = "0.31"
+egui_plot = "0.32"
+image = { version = "0.25", default-features = false, features = ["png"] }
+rfd = "0.15"
+serde_json = "1"
+yfoc-motor-sdk = { path = "../../../sdk/src/yfoc-motor-sdk" }
+yfoc-can = { path = "../../../sdk/src/yfoc-can" }
+yfoc-flash = { path = "../yfoc-flash" }
+yfoc-protocol = { path = "../../../sdk/src/yfoc-protocol" }

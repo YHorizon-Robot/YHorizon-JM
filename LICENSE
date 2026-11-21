@@ -1,7 +1,7 @@
 YHorizon-JM is dual-licensed.
 
 Open-source license
-  firmware/, sdk/, and tools/
+  firmware/, host-rs/, sdk/, and tools/
     GNU General Public License v3.0 only (GPL-3.0-only)
     Full text: LICENSES/GPL-3.0.txt
     https://www.gnu.org/licenses/gpl-3.0.html
@@ -35,7 +35,7 @@ stated in the file or its directory.
 YHorizon-JM 采用双许可。
 
 开源许可
-  firmware/、sdk/、tools/
+  firmware/、host-rs/、sdk/、tools/
     GNU General Public License v3.0 only（GPL-3.0-only）
     全文见 LICENSES/GPL-3.0.txt
     https://www.gnu.org/licenses/gpl-3.0.html

@@ -4,14 +4,20 @@
 #include <string.h>
 
 #include "config.h"
-#include "gd32f30x.h"
+#include "nv_flash.h"
 
-#define CALI_NV_MAGIC      (0x59484A4DUL) /* "YHJM" */
+#define CALI_NV_MAGIC      (0x59464F43UL) /* "YFOC" */
 #define CALI_NV_VERSION_V1 (1U)
 #define CALI_NV_VERSION_V2 (2U)
-#define CALI_NV_VERSION    (3U)
-#define CALI_NV_ADDR       (0x0803F800UL) /* last 2 KB page of 256 KB Flash */
+#define CALI_NV_VERSION_V3 (3U)
+#define CALI_NV_VERSION    (4U)
 #define CALI_NV_FLAG_GAINS (1U)
+/**
+ * @brief 记录带有游标第二编码器零偏，值在 reserved_v3 的 bit8…15（int8）。
+ *
+ * 沿用 V4 的长度和版本号：旧固件只认 GAINS 标志，也不读这 8 位，降级后照常加载。
+ */
+#define CALI_NV_FLAG_ENC2_OFFSET (2U)
 
 typedef struct
 {
@@ -76,7 +82,7 @@ static uint8_t CaliNv_HeaderOk(const CaliNvRecord_t *rec)
   {
     return 0U;
   }
-  if (rec->version != CALI_NV_VERSION)
+  if ((rec->version != CALI_NV_VERSION) && (rec->version != CALI_NV_VERSION_V3))
   {
     return 0U;
   }
@@ -132,6 +138,11 @@ static void CaliNv_UnpackCommon(uint16_t version,
   const uint32_t w1 = reserved[1];
   const uint32_t w2 = reserved[2];
 
+  out->user_gains_inner_loop = CFG_INNER_LOOP_VOLTAGE;
+  out->user_gains_scale_milli = 1000U;
+  out->enc2_offset_valid = 0U;
+  out->enc2_offset_raw = 0;
+
   out->pole_pairs = (uint8_t)pole_pairs;
   out->encoder_dir = (int8_t)encoder_dir;
   out->closed_loop_dir = (int8_t)closed_loop_dir;
@@ -166,11 +177,22 @@ static void CaliNv_Unpack(const CaliNvRecord_t *rec, CaliNvData_t *out)
                       rec->closed_loop_dir, rec->electrical_offset_rad,
                       rec->reserved, out);
   out->mt_zero_rad = rec->mt_zero_rad;
+  if (rec->version >= CALI_NV_VERSION)
+  {
+    out->user_gains_inner_loop = (uint8_t)(rec->reserved_v3 & 0xFFU);
+    out->user_gains_scale_milli = (uint16_t)(rec->reserved_v3 >> 16);
+    if ((((rec->reserved[0] >> 8) & 0xFFU) & CALI_NV_FLAG_ENC2_OFFSET) != 0U)
+    {
+      out->enc2_offset_valid = 1U;
+      out->enc2_offset_raw = (int8_t)(uint8_t)((rec->reserved_v3 >> 8) & 0xFFU);
+    }
+  }
 }
 
 static void CaliNv_Pack(CaliNvRecord_t *rec, const CaliNvData_t *in)
 {
   uint8_t flags = 0U;
+  uint8_t enc2_offset = 0U;
   uint16_t pos_kd = 0U;
   uint16_t vel_kp = 0U;
   uint16_t vel_ki = 0U;
@@ -193,13 +215,20 @@ static void CaliNv_Pack(CaliNvRecord_t *rec, const CaliNvData_t *in)
     pos_ki = in->pos_ki_raw;
     pos_kd = in->pos_kd_raw;
   }
+  if (in->enc2_offset_valid != 0U)
+  {
+    flags |= CALI_NV_FLAG_ENC2_OFFSET;
+    enc2_offset = (uint8_t)in->enc2_offset_raw;
+  }
   rec->reserved[0] = (uint32_t)(CaliNv_NodeIdOk(in->node_id) ? in->node_id : 0U) |
                      ((uint32_t)flags << 8) |
                      ((uint32_t)pos_kd << 16);
   rec->reserved[1] = (uint32_t)vel_kp | ((uint32_t)vel_ki << 16);
   rec->reserved[2] = (uint32_t)pos_kp | ((uint32_t)pos_ki << 16);
   rec->mt_zero_rad = in->mt_zero_rad;
-  rec->reserved_v3 = 0U;
+  rec->reserved_v3 = (uint32_t)in->user_gains_inner_loop |
+                     ((uint32_t)enc2_offset << 8) |
+                     ((uint32_t)in->user_gains_scale_milli << 16);
   rec->crc32 = CaliNv_RecordCrc(rec);
 }
 
@@ -212,14 +241,12 @@ static uint8_t CaliNv_ReadData(CaliNvData_t *out)
     return 0U;
   }
 
-  __DSB();
-  memcpy(&ver, (const void *)(CALI_NV_ADDR + 4UL), sizeof(ver));
-  __DSB();
+  NvFlash_Read(NvFlash_PageAddr() + 4UL, &ver, sizeof(ver));
 
   if ((ver == CALI_NV_VERSION_V1) || (ver == CALI_NV_VERSION_V2))
   {
     CaliNvRecordV2_t rec;
-    memcpy(&rec, (const void *)CALI_NV_ADDR, sizeof(rec));
+    NvFlash_Read(NvFlash_PageAddr(), &rec, sizeof(rec));
     if (CaliNv_HeaderOkV2(&rec) == 0U)
     {
       return 0U;
@@ -227,10 +254,10 @@ static uint8_t CaliNv_ReadData(CaliNvData_t *out)
     CaliNv_UnpackV2(&rec, out);
     return 1U;
   }
-  if (ver == CALI_NV_VERSION)
+  if ((ver == CALI_NV_VERSION) || (ver == CALI_NV_VERSION_V3))
   {
     CaliNvRecord_t rec;
-    memcpy(&rec, (const void *)CALI_NV_ADDR, sizeof(rec));
+    NvFlash_Read(NvFlash_PageAddr(), &rec, sizeof(rec));
     if (CaliNv_HeaderOk(&rec) == 0U)
     {
       return 0U;
@@ -241,14 +268,12 @@ static uint8_t CaliNv_ReadData(CaliNvData_t *out)
   return 0U;
 }
 
-static uint8_t CaliNv_Program(const CaliNvRecord_t *rec);
-
 static uint8_t CaliNv_WriteData(const CaliNvData_t *in)
 {
   CaliNvRecord_t rec;
 
   CaliNv_Pack(&rec, in);
-  return CaliNv_Program(&rec);
+  return NvFlash_WritePage(&rec, sizeof(rec));
 }
 
 static uint8_t CaliNv_DataValid(const CaliNvData_t *data)
@@ -266,58 +291,6 @@ static uint8_t CaliNv_DataValid(const CaliNvData_t *data)
     return 0U;
   }
   return 1U;
-}
-
-static uint32_t CaliNv_IrqQuiesce(void)
-{
-  const uint32_t primask = __get_PRIMASK();
-
-  __disable_irq();
-  __DSB();
-  __ISB();
-  return primask;
-}
-
-static void CaliNv_IrqResume(uint32_t primask)
-{
-  timer_interrupt_flag_clear(TIMER0, TIMER_INT_FLAG_UP);
-  timer_interrupt_flag_clear(TIMER5, TIMER_INT_FLAG_UP);
-  NVIC_ClearPendingIRQ(TIMER0_UP_IRQn);
-  NVIC_ClearPendingIRQ(TIMER5_IRQn);
-  NVIC_ClearPendingIRQ(USBD_LP_CAN0_RX0_IRQn);
-  NVIC_ClearPendingIRQ(CAN0_EWMC_IRQn);
-  SCB->ICSR = SCB_ICSR_PENDSTCLR_Msk;
-  __DSB();
-  __ISB();
-  __set_PRIMASK(primask);
-}
-
-static uint8_t CaliNv_Program(const CaliNvRecord_t *rec)
-{
-  uint32_t words[10];
-  uint32_t i;
-  uint8_t ok = 0U;
-  const uint32_t primask = CaliNv_IrqQuiesce();
-  const uint32_t nwords = sizeof(*rec) / 4U;
-
-  memcpy(words, rec, sizeof(*rec));
-  fmc_unlock();
-  if (FMC_READY == fmc_page_erase(CALI_NV_ADDR))
-  {
-    ok = 1U;
-    for (i = 0U; i < nwords; i++)
-    {
-      if (FMC_READY != fmc_word_program(CALI_NV_ADDR + (i * 4UL), words[i]))
-      {
-        ok = 0U;
-        break;
-      }
-    }
-  }
-  fmc_lock();
-  __DSB();
-  CaliNv_IrqResume(primask);
-  return ok;
 }
 
 uint8_t CaliNv_Load(CaliNvData_t *out)
@@ -338,6 +311,11 @@ uint8_t CaliNv_LoadNodeId(void)
     return 0U;
   }
   return data.node_id;
+}
+
+uint8_t CaliNv_LoadMetadata(CaliNvData_t *out)
+{
+  return (out != 0) ? CaliNv_ReadData(out) : 0U;
 }
 
 uint8_t CaliNv_Save(const CaliNvData_t *in)
@@ -364,6 +342,8 @@ uint8_t CaliNv_Save(const CaliNvData_t *in)
   rec.electrical_offset_rad = in->electrical_offset_rad;
   rec.mt_zero_rad = in->mt_zero_rad;
   rec.node_id = CaliNv_NodeIdOk(in->node_id) ? in->node_id : rec.node_id;
+  rec.enc2_offset_valid = (in->enc2_offset_valid != 0U) ? 1U : 0U;
+  rec.enc2_offset_raw = (in->enc2_offset_valid != 0U) ? in->enc2_offset_raw : 0;
 
   ok = CaliNv_WriteData(&rec);
   if (ok != 0U)
@@ -372,7 +352,9 @@ uint8_t CaliNv_Save(const CaliNvData_t *in)
     if ((CaliNv_Load(&check) == 0U) ||
         (check.pole_pairs != rec.pole_pairs) ||
         (check.encoder_dir != rec.encoder_dir) ||
-        (check.closed_loop_dir != rec.closed_loop_dir))
+        (check.closed_loop_dir != rec.closed_loop_dir) ||
+        (check.enc2_offset_valid != rec.enc2_offset_valid) ||
+        (check.enc2_offset_raw != rec.enc2_offset_raw))
     {
       ok = 0U;
     }
@@ -402,6 +384,7 @@ uint8_t CaliNv_SaveNodeId(uint8_t node_id)
 }
 
 uint8_t CaliNv_SaveUserGains(uint8_t node_id,
+                             uint8_t inner_loop,
                              uint16_t vel_kp_raw,
                              uint16_t vel_ki_raw,
                              uint16_t pos_kp_raw,
@@ -410,12 +393,16 @@ uint8_t CaliNv_SaveUserGains(uint8_t node_id,
 {
   CaliNvData_t rec;
 
+  if (inner_loop > CFG_INNER_LOOP_CURRENT) { return 0U; }
   if (CaliNv_ReadData(&rec) == 0U)
   {
     memset(&rec, 0, sizeof(rec));
     rec.node_id = CaliNv_NodeIdOk(node_id) ? node_id : 0U;
   }
   rec.user_gains_valid = 1U;
+  rec.user_gains_inner_loop = inner_loop;
+  rec.user_gains_scale_milli = (inner_loop == CFG_INNER_LOOP_CURRENT)
+      ? (uint16_t)((CFG_I_LIMIT_A / CFG_V_LIMIT) * 1000.0f + 0.5f) : 1000U;
   rec.vel_kp_raw = vel_kp_raw;
   rec.vel_ki_raw = vel_ki_raw;
   rec.pos_kp_raw = pos_kp_raw;
@@ -430,6 +417,7 @@ uint8_t CaliNv_SaveUserGains(uint8_t node_id,
     return 0U;
   }
   return ((rec.user_gains_valid != 0U) &&
+          (rec.user_gains_inner_loop == inner_loop) &&
           (rec.vel_kp_raw == vel_kp_raw) &&
           (rec.vel_ki_raw == vel_ki_raw) &&
           (rec.pos_kp_raw == pos_kp_raw) &&
