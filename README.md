@@ -191,7 +191,15 @@ Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_gro
 
 `joint_gui.py` 是另一套界面，只用来对照 RS05 / DM4310 的帧，不控制本仓库固件的 Motor Protocol V1.0。在 `sdk/python` 下执行 `python joint_gui.py`（依赖 `requirements.txt`）。编解码单测：`python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`。
 
-`docs/` 里的 RS05 / DM4310 兼容笔记还没有做进固件。校准、电流环和多轴同步说明对应当前固件。
+### DM4310 MIT 台架镜像
+
+用 `.\tools\build.ps1 -Preset gd32f303-dm4310`（Linux 用 `./tools/build.sh --preset gd32f303-dm4310`）生成独立镜像。先在原生 V1 上完成本机校准、标零并设置节点 1–15，停机后按页刷写对应 ELF。换回同版 V1 可维护原有校准参数。此镜像采用经典 CAN 1 Mbps，收节点号，反馈 ID 为 `0x10 + 节点号`。例如节点 1 用 `python sdk/python/joint_gui.py --protocol DM4310 --node 1 --host 0x11`。RS05 当前仅有主机端编解码。
+
+首版支持 MIT 五字段、使能 FC、失能 FD、清故障 FB，以及定向只读寄存器 7/8/9/10/21/22/23。可先发送标准帧 `7FF#0100331500000000` 读取节点 1 的 PMAX，预期 `011#0100331500004841`。运动前检查机械行程，在 GUI 选择“自由”（Kp、Kd、前馈为零），以 100 Hz 连续发送，再点使能。收到使能或最后一条运动指令后 100 ms 超时关桥，需要重新使能。兼容层忽略寄存器写入；收到 FE 时关桥，不保存零点、不回成功应答。
+
+P/V/T 线量程分别为 ±12.5 rad、±30 rad/s、±10 Nm。位置为相对本机机械零点的输出轴绝对目标，反馈超出编码范围时饱和。台架镜像把含齿槽补偿的 Iq 目标限制在 ±1 A。反馈力矩为按实测 Iq 换算的输出轴估计值，D6 为板温（不可用时填 0），D7 填 0。原厂主控互通及实物关桥延迟待台架验证。
+
+在本机测试通信状态机和报文字节可运行 `cmake -S firmware/tests -B firmware/build/host-tests -G Ninja`、`cmake --build firmware/build/host-tests`、`ctest --test-dir firmware/build/host-tests --output-on-failure`。
 
 ## 商业合作
 

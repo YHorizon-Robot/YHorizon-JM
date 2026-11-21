@@ -10,6 +10,9 @@ extern "C" {
 typedef struct
 {
   uint32_t id;
+#if CFG_DM4310
+  uint32_t received_ms;
+#endif
   uint8_t  data[8];
 } CanFrame_t;
 
@@ -21,6 +24,10 @@ void Can_StopForFlash(void);
 void Can_Restart(void);
 uint8_t Can_PopRx(CanFrame_t *frame);
 uint8_t Can_Send(uint32_t id, const uint8_t data[8]);
+#if CFG_DM4310
+uint8_t Can_RxLost(void);
+void Can_GetLossCounts(uint32_t *rx, uint32_t *tx);
+#endif
 
 #ifdef __cplusplus
 }

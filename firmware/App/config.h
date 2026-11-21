@@ -112,6 +112,10 @@ extern "C" {
  *        连续 CFG_I_TRIP_CONFIRM 个有效采样超过跳闸值才关桥。
  */
 #define CFG_I_LIMIT_A               (20.0f)
+#if CFG_DM4310
+/* Initial bench image: cap total q-axis demand, including cogging compensation. */
+#define CFG_DM4310_BENCH_I_LIMIT_A   (1.0f)
+#endif
 
 /**
  * @brief 电机轴力矩，单位 Nm。Iq 为相电流峰值。

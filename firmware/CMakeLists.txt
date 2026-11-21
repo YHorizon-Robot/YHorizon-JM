@@ -23,6 +23,15 @@ set(CMAKE_C_FLAGS_RELWITHDEBINFO "-O2 -g3 -DNDEBUG" CACHE STRING "RelWithDebInfo
 
 set(YFOC_BOARD "YH_JM" CACHE STRING "Board directory under Boards/")
 set(YFOC_FACTORY_TEST OFF CACHE BOOL "Build the factory self-test instead of the servo")
+set(CAN_PROTOCOL "v1" CACHE STRING "CAN frontend (v1 or dm4310)")
+set_property(CACHE CAN_PROTOCOL PROPERTY STRINGS v1 dm4310)
+if(NOT CAN_PROTOCOL STREQUAL "v1" AND NOT CAN_PROTOCOL STREQUAL "dm4310")
+    message(FATAL_ERROR "Unsupported CAN_PROTOCOL '${CAN_PROTOCOL}'")
+endif()
+if(YFOC_FACTORY_TEST AND NOT CAN_PROTOCOL STREQUAL "v1")
+    message(FATAL_ERROR "Factory self-test requires CAN_PROTOCOL=v1")
+endif()
+message(STATUS "JM1 CAN protocol: ${CAN_PROTOCOL}")
 
 if(NOT YFOC_BOARD STREQUAL "YH_JM")
     message(FATAL_ERROR "This repository only builds YH_JM (got '${YFOC_BOARD}')")
@@ -37,6 +46,14 @@ include("${YFOC_BOARD_DIR}/board.cmake")
 add_executable(${CMAKE_PROJECT_NAME})
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/Port/${YFOC_PORT}/port.cmake")
+
+if(CAN_PROTOCOL STREQUAL "dm4310")
+    set(comm_sources App/compat/comm_dm4310.c App/compat/dm4310.c)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE CFG_DM4310=1)
+else()
+    set(comm_sources App/multi_axis.c App/comm.c)
+    target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE CFG_MULTIAXIS=1)
+endif()
 
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     Hw/RTT/SEGGER_RTT.c
@@ -53,8 +70,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/cali.c
     App/cali_nv.c
     App/commission.c
-    App/multi_axis.c
-    App/comm.c
+    ${comm_sources}
     App/node.c
 )
 
@@ -76,7 +92,6 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
 
 target_compile_definitions(${CMAKE_PROJECT_NAME} PRIVATE
     CFG_COMMISSION=1
-    CFG_MULTIAXIS=1
     $<$<CONFIG:Debug>:DEBUG>
 )
 

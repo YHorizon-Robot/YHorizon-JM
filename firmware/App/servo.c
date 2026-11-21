@@ -492,13 +492,18 @@ static uint8_t Servo_UpdatePwmEncoder(void)
 
 static inline void Servo_RunCurrent(float elec, float signed_ref, uint8_t early)
 {
+#if CFG_DM4310
+  const float limit = CFG_DM4310_BENCH_I_LIMIT_A;
+#else
+  const float limit = CFG_I_LIMIT_A;
+#endif
 #if (CFG_COMMISSION != 0U)
   const float target = Foc_Clamp(Commission_LimitIq(
       signed_ref * (CFG_I_LIMIT_A / CFG_V_LIMIT) + Commission_Cogging(s_enc1_raw),
-      s_closed_loop_dir), -CFG_I_LIMIT_A, CFG_I_LIMIT_A);
+      s_closed_loop_dir), -limit, limit);
 #else
   const float target = Foc_Clamp(signed_ref * (CFG_I_LIMIT_A / CFG_V_LIMIT),
-                                 -CFG_I_LIMIT_A, CFG_I_LIMIT_A);
+                                 -limit, limit);
 #endif
   const uint8_t valid = s_cmd_valid;
   /* The current sample is near the peak. The encoder angle is from the

@@ -59,7 +59,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 case "${PRESET}" in
-    gd32f303|gd32f303-debug|gd32f303-factory) ;;
+    gd32f303|gd32f303-debug|gd32f303-factory|gd32f303-dm4310) ;;
     *)
         echo "unsupported preset: ${PRESET}" >&2
         exit 1

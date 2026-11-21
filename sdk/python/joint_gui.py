@@ -129,6 +129,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.host_spin = QtWidgets.QSpinBox()
         self.host_spin.setValue(0xFD)
+        self.node_spin.valueChanged.connect(self._on_node_changed)
 
         self.sim_check = QtWidgets.QCheckBox("内置模拟从站")
         self.sim_check.setToolTip("仅在 virtual 接口下可用，用于无硬件时验证界面")
@@ -351,6 +352,10 @@ class MainWindow(QtWidgets.QMainWindow):
 
     # ------------------------------------------------------------ 协议切换
 
+    def _on_node_changed(self, node: int) -> None:
+        if isinstance(self.protocol, Dm4310):
+            self.host_spin.setValue(0x10 + node)
+
     def _on_protocol_changed(self, name: str) -> None:
         if self.connected:
             self.proto_combo.setCurrentText(self.protocol.name)
@@ -371,7 +376,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.host_label.setText("主机 ID" if is_rs05 else "反馈 ID (MST_ID)")
         self.host_spin.setRange(0, 0xFF if is_rs05 else 0x7FF)
-        self.host_spin.setValue(0xFD if is_rs05 else 0x00)
+        self.host_spin.setValue(0xFD if is_rs05 else 0x10 + self.node_spin.value())
         self.btn_ping.setEnabled(is_rs05)
 
         if is_rs05:
@@ -382,7 +387,7 @@ class MainWindow(QtWidgets.QMainWindow):
         else:
             self.range_label.setText(
                 "DM4310 控制量程：位置 ±12.5 rad · 速度 ±30 rad/s · Kp 0..500 · Kd 0..5 · 力矩 ±10 Nm\n"
-                "反馈同量程；11 位标准帧，反馈 ID 由固件 MST_ID 决定。"
+                "反馈同量程；JM1 台架镜像节点为 1..15，MST_ID = 0x10 + 节点号。"
             )
         self._clear_feedback()
 
@@ -616,7 +621,8 @@ class MainWindow(QtWidgets.QMainWindow):
                 fb = self.protocol.parse_feedback(arb, data)
             kind = "EXT" if extended else "STD"
         else:
-            if not extended and arb != self.node_spin.value():
+            if (not extended and arb == self.host_spin.value() and len(data) == 8
+                    and (data[0] & 0x0F) == (self.node_spin.value() & 0x0F)):
                 fb = self.protocol.parse_feedback(arb, data)
             kind = "STD" if not extended else "EXT"
 

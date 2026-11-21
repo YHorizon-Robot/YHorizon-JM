@@ -3,6 +3,13 @@
 #include "board.h"
 #include "config.h"
 #include "gd32f30x.h"
+#if CFG_DM4310
+#include "comm.h"
+#include "compat/dm4310.h"
+static volatile uint8_t s_rx_lost;
+static uint32_t s_rx_losses;
+static uint32_t s_tx_drops;
+#endif
 
 static CanFrame_t s_rx[CFG_CAN_RX_SLOTS];
 static volatile uint8_t s_rx_head;
@@ -12,6 +19,11 @@ static uint8_t s_node_id = 1U;
 
 static void Can_ConfigFilters(uint8_t id)
 {
+#if CFG_DM4310
+  /* Both are exact standard DATA filters. Register requests carry the node in D0/D1. */
+  const uint16_t ids[] = {id, DM4310_REGISTER_ID};
+  if (id < 1U || id > DM4310_MAX_NODE) { return; }
+#else
   static const uint16_t bases[5] = {
     CFG_CAN_MOTION_BASE,
     CFG_CAN_VEL_BASE,
@@ -19,6 +31,7 @@ static void Can_ConfigFilters(uint8_t id)
     CFG_CAN_POS_BASE,
     CFG_CAN_MGMT_BASE
   };
+#endif
   can_filter_parameter_struct filter;
   uint32_t i;
 
@@ -31,6 +44,14 @@ static void Can_ConfigFilters(uint8_t id)
   filter.filter_mask_low = 0x0006U;
   filter.filter_mask_high = (uint16_t)(0x7FFU << 5);
 
+#if CFG_DM4310
+  for (i = 0U; i < sizeof(ids) / sizeof(ids[0]); i++)
+  {
+    filter.filter_number = (uint16_t)i;
+    filter.filter_list_high = (uint16_t)(ids[i] << 5);
+    can_filter_init(&filter);
+  }
+#else
   for (i = 0U; i < 5U; i++)
   {
     const uint16_t sid = (uint16_t)(bases[i] + (uint16_t)id);
@@ -45,6 +66,7 @@ static void Can_ConfigFilters(uint8_t id)
   filter.filter_number = 6U;
   filter.filter_list_high = (uint16_t)(CFG_CAN_SYNC_ID << 5);
   can_filter_init(&filter);
+#endif
 }
 
 static void Can_HwStart(uint8_t node_id)
@@ -100,6 +122,12 @@ void Can_ProcessRxIrq(void)
     uint8_t next;
     uint8_t i;
 
+#if CFG_DM4310
+    /* The SPL dequeues with a read/modify/write on RFIFO0 (overrun is W1C).
+     * Treat a full hardware FIFO as loss before that flag can be cleared. */
+    if (can_receive_message_length_get(CAN0, CAN_FIFO0) == 3U ||
+        can_flag_get(CAN0, CAN_FLAG_RFO0) != RESET) { s_rx_lost = 1U; }
+#endif
     can_message_receive(CAN0, CAN_FIFO0, &rx_msg);
     if ((rx_msg.rx_ff != CAN_FF_STANDARD) ||
         (rx_msg.rx_ft != CAN_FT_DATA) ||
@@ -108,14 +136,22 @@ void Can_ProcessRxIrq(void)
       continue;
     }
 
+#if !CFG_DM4310
     if (rx_msg.rx_sfid == CFG_CAN_SYNC_ID) { MultiAxis_OnSyncIrq(rx_msg.rx_data); continue; }
+#endif
     next = (uint8_t)((s_rx_head + 1U) % CFG_CAN_RX_SLOTS);
     if (next == s_rx_tail)
     {
+#if CFG_DM4310
+      s_rx_lost = 1U;
+#endif
       continue;
     }
 
     s_rx[s_rx_head].id = rx_msg.rx_sfid;
+#if CFG_DM4310
+    s_rx[s_rx_head].received_ms = Board_GetTickMs();
+#endif
     for (i = 0U; i < 8U; i++)
     {
       s_rx[s_rx_head].data[i] = rx_msg.rx_data[i];
@@ -139,6 +175,9 @@ void Can_OnBusOffIrq(void)
 
 void Can_StopForFlash(void)
 {
+#if CFG_DM4310
+  Comm_OnCanLoss();
+#endif
   nvic_irq_disable(USBD_LP_CAN0_RX0_IRQn);
   nvic_irq_disable(CAN0_EWMC_IRQn);
   can_interrupt_disable(CAN0, CAN_INT_RFNE0);
@@ -149,25 +188,51 @@ void Can_StopForFlash(void)
 
 void Can_Restart(void)
 {
+#if !CFG_DM4310
   can_receive_message_struct rx_msg;
+#else
+  s_rx_lost = 0U;
+#endif
 
   s_rx_head = 0U;
   s_rx_tail = 0U;
   s_bus_off_pending = 0U;
 
   Can_HwStart(s_node_id);
+#if !CFG_DM4310
   while (can_receive_message_length_get(CAN0, CAN_FIFO0) != 0U)
   {
     can_message_receive(CAN0, CAN_FIFO0, &rx_msg);
   }
+#endif
 }
+
+#if CFG_DM4310
+uint8_t Can_RxLost(void)
+{
+  return s_rx_lost || s_bus_off_pending || can_flag_get(CAN0, CAN_FLAG_BOERR) != RESET;
+}
+
+void Can_GetLossCounts(uint32_t *rx, uint32_t *tx)
+{
+  *rx = s_rx_losses;
+  *tx = s_tx_drops;
+}
+#endif
 
 void Can_Service(void)
 {
+#if CFG_DM4310
+  if (!Can_RxLost())
+#else
   if ((s_bus_off_pending == 0U) && (RESET == can_flag_get(CAN0, CAN_FLAG_BOERR)))
+#endif
   {
     return;
   }
+#if CFG_DM4310
+  ++s_rx_losses; /* Count recovery episodes, not individual lost frames. */
+#endif
   Can_StopForFlash();
   Can_Restart();
 }
@@ -189,6 +254,9 @@ uint8_t Can_PopRx(CanFrame_t *frame)
   }
 
   frame->id = s_rx[tail].id;
+#if CFG_DM4310
+  frame->received_ms = s_rx[tail].received_ms;
+#endif
   for (i = 0U; i < 8U; i++)
   {
     frame->data[i] = s_rx[tail].data[i];
@@ -214,5 +282,8 @@ uint8_t Can_Send(uint32_t id, const uint8_t data[8])
   }
 
   mailbox = can_message_transmit(CAN0, &tx_msg);
+#if CFG_DM4310
+  if (mailbox == CAN_NOMAILBOX) { ++s_tx_drops; }
+#endif
   return (mailbox != CAN_NOMAILBOX) ? 1U : 0U;
 }

@@ -191,7 +191,13 @@ On Windows use `Bus("pcan", "PCAN_USBBUS1")`. Queries, modes, disable, and `run_
 
 `joint_gui.py` is a separate window for RS05 / DM4310 frames. It does not speak this repository's Motor Protocol V1.0. From `sdk/python`, run `python joint_gui.py` (dependencies are in `requirements.txt`). Codec test: `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
 
-The RS05 / DM4310 notes in `docs/` are not implemented by this firmware. The commissioning, current-loop, and group-sync notes match the current firmware and are written in Chinese.
+### DM4310 MIT bench image
+
+Build with `.\tools\build.ps1 -Preset gd32f303-dm4310` or `./tools/build.sh --preset gd32f303-dm4310`. Calibrate and zero the unit in native V1, assign node 1–15, stop the drive and page-flash the selected ELF. Use the matching V1 image for maintenance. The bench image receives standard 1 Mbps CAN frames on the node ID and replies on `0x10 + node`. For node 1, run `python sdk/python/joint_gui.py --protocol DM4310 --node 1 --host 0x11`.
+
+The image handles MIT motion, FC enable, FD disable, FB clear and directed read-only registers 7/8/9/10/21/22/23. For a stationary connection check, send `7FF#0100331500000000` and expect `011#0100331500004841` (PMAX = 12.5 rad). Start a zero-gain, zero-feedforward stream at 100 Hz before enabling. Enable and accepted motion commands have a 100 ms deadline; re-enable after a timeout. FE disarms without saving a zero or acknowledging success. Register writes are ignored.
+
+Position targets use absolute output-shaft radians relative to the JM1 zero. Feedback saturates at the wire limits of ±12.5 rad, ±30 rad/s and ±10 Nm. The bench cap is ±1 A on total Iq demand including cogging compensation. Torque feedback is estimated from measured Iq, D6 reports board temperature (0 if unavailable) and D7 is 0. Hardware timing and vendor-host interoperability still require bench validation. RS05 support is currently host-side.
 
 ## Commercial cooperation
 

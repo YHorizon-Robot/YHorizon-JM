@@ -1,10 +1,10 @@
 # Build YHorizon-JM firmware on Windows (CLion cmake/ninja, CubeIDE ARM GCC).
-# Usage: .\tools\build.ps1 [-Preset gd32f303|gd32f303-debug|gd32f303-factory]
+# Usage: .\tools\build.ps1 [-Preset gd32f303|gd32f303-debug|gd32f303-factory|gd32f303-dm4310]
 # Run .\tools\setup-env.ps1 first on a new machine.
 
 [CmdletBinding()]
 param(
-    [ValidateSet('gd32f303', 'gd32f303-debug', 'gd32f303-factory')]
+    [ValidateSet('gd32f303', 'gd32f303-debug', 'gd32f303-factory', 'gd32f303-dm4310')]
     [string]$Preset = 'gd32f303'
 )
 

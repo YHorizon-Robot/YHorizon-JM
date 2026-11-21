@@ -10,7 +10,16 @@
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "YFOC_BOARD": "YH_JM",
+                "CAN_PROTOCOL": "v1",
                 "YFOC_FACTORY_TEST": "OFF"
+            }
+        },
+        {
+            "name": "gd32f303-dm4310",
+            "displayName": "YH_JM DM4310 MIT (bench)",
+            "inherits": "gd32f303",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "dm4310"
             }
         },
         {
@@ -34,6 +43,10 @@
         {
             "name": "gd32f303",
             "configurePreset": "gd32f303"
+        },
+        {
+            "name": "gd32f303-dm4310",
+            "configurePreset": "gd32f303-dm4310"
         },
         {
             "name": "gd32f303-debug",

@@ -10,6 +10,9 @@ extern "C" {
 void Comm_Init(uint8_t cali_ok);
 void Comm_Process(void);
 uint8_t Comm_IsCalibrated(void);
+#if CFG_DM4310
+void Comm_OnCanLoss(void);
+#endif
 
 #ifdef __cplusplus
 }

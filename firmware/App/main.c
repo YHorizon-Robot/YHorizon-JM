@@ -60,14 +60,27 @@ int main(void)
     Servo_Service();
     Commission_Service();
     Comm_Process();
+#if !CFG_DM4310
     MultiAxis_Service();
     if (!Commission_BlocksDrive() && !MultiAxis_Busy()) { Node_Service(Comm_IsCalibrated()); }
+#endif
 
     now = Board_GetTickMs();
     if ((now - last_dbg_ms) >= CFG_DEBUG_PERIOD_MS)
     {
       ServoTelemetry_t tel;
       last_dbg_ms = now;
+#if CFG_DM4310
+      uint32_t rx_losses, tx_drops;
+      Can_GetLossCounts(&rx_losses, &tx_drops);
+      const uint16_t fault = Servo_GetFault();
+      const uint8_t warning = Servo_GetWarning();
+      if (rx_losses || tx_drops || fault || warning)
+      {
+        Dbg_Printf("DM4310 recoveries=%u tx_drops=%u fault=%x warning=%x\r\n",
+                   (unsigned)rx_losses, (unsigned)tx_drops, (unsigned)fault, (unsigned)warning);
+      }
+#endif
       Servo_GetTelemetry(&tel);
       Dbg_Printf("m=%d il=%d p=%d v=%d t=%d iq=%d tn=%d tmax=%d vbus=%d\r\n",
                  (int)tel.ctrl_mode,

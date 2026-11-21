@@ -7,7 +7,7 @@
 #   .\tools\flash.ps1 -Preset gd32f303-debug
 
 param(
-    [ValidateSet('gd32f303', 'gd32f303-debug', 'gd32f303-factory')]
+    [ValidateSet('gd32f303', 'gd32f303-debug', 'gd32f303-factory', 'gd32f303-dm4310')]
     [string]$Preset = 'gd32f303',
 
     [string]$ElfFile = '',
