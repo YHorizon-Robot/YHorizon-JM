@@ -35,6 +35,7 @@
 /* This file refers the CMSIS standard, some adjustments are made according to GigaDevice chips */
 
 #include "gd32f30x.h"
+#include "clock_diag.h"
 
 /* system frequency define */
 #define __IRC8M           (IRC8M_VALUE)            /* internal 8 MHz RC oscillator frequency */
@@ -902,24 +903,22 @@ static void system_clock_108m_hxtal(void)
 */
 static void system_clock_120m_hxtal(void)
 {
-    uint32_t timeout = 0U;
-    uint32_t stab_flag = 0U;
+    uint32_t start;
+    uint32_t hxtal_cycles;
+    uint8_t pll_ok = 0U;
     __IO uint32_t reg_temp;
 
-    /* enable HXTAL */
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    start = DWT->CYCCNT;
     RCU_CTL |= RCU_CTL_HXTALEN;
-
-    /* wait until HXTAL is stable or the startup time is longer than HXTAL_STARTUP_TIMEOUT */
-    do{
-        timeout++;
-        stab_flag = (RCU_CTL & RCU_CTL_HXTALSTB);
-    }while((0U == stab_flag) && (HXTAL_STARTUP_TIMEOUT != timeout));
-
-    /* if fail */
-    if(0U == (RCU_CTL & RCU_CTL_HXTALSTB)){
-        while(1){
+    while ((RCU_CTL & RCU_CTL_HXTALSTB) == 0U) {
+        if ((uint32_t)(DWT->CYCCNT - start) >= CLOCK_DIAG_HXTAL_FAIL_CYC) {
+            ClockDiag_BootSet(DWT->CYCCNT - start, 0U, 0U, CLOCK_DIAG_SRC_IRC8M);
+            return;
         }
     }
+    hxtal_cycles = DWT->CYCCNT - start;
 
     RCU_APB1EN |= RCU_APB1EN_PMUEN;
     PMU_CTL |= PMU_CTL_LDOVS;
@@ -967,29 +966,41 @@ static void system_clock_120m_hxtal(void)
     /* enable PLL */
     RCU_CTL |= RCU_CTL_PLLEN;
 
-    /* wait until PLL is stable */
-    while(0U == (RCU_CTL & RCU_CTL_PLLSTB)){
+    /* IRC8M still clocks the core while starting the PLL and high-drive mode. */
+    start = DWT->CYCCNT;
+    while ((RCU_CTL & RCU_CTL_PLLSTB) == 0U) {
+        if ((uint32_t)(DWT->CYCCNT - start) >= CLOCK_DIAG_PLL_FAIL_CYC) { goto fallback; }
     }
+    pll_ok = 1U;
 
-    /* enable the high-drive to extend the clock frequency to 120 MHz */
     PMU_CTL |= PMU_CTL_HDEN;
-    while(0U == (PMU_CS & PMU_CS_HDRF)){
+    start = DWT->CYCCNT;
+    while ((PMU_CS & PMU_CS_HDRF) == 0U) {
+        if ((uint32_t)(DWT->CYCCNT - start) >= CLOCK_DIAG_PLL_FAIL_CYC) { goto fallback; }
     }
 
-    /* select the high-drive mode */
     PMU_CTL |= PMU_CTL_HDS;
-    while(0U == (PMU_CS & PMU_CS_HDSRF)){
+    start = DWT->CYCCNT;
+    while ((PMU_CS & PMU_CS_HDSRF) == 0U) {
+        if ((uint32_t)(DWT->CYCCNT - start) >= CLOCK_DIAG_PLL_FAIL_CYC) { goto fallback; }
     }
 
     reg_temp = RCU_CFG0;
-    /* select PLL as system clock */
     reg_temp &= ~RCU_CFG0_SCS;
-    reg_temp |= RCU_CKSYSSRC_PLL;
-    RCU_CFG0 = reg_temp;
-
-    /* wait until PLL is selected as system clock */
-    while(0U == (RCU_CFG0 & RCU_SCSS_PLL)){
+    RCU_CFG0 = reg_temp | RCU_CKSYSSRC_PLL;
+    start = DWT->CYCCNT;
+    while ((RCU_CFG0 & RCU_CFG0_SCSS) != RCU_SCSS_PLL) {
+        if ((uint32_t)(DWT->CYCCNT - start) >= CLOCK_DIAG_PLL_FAIL_CYC) { goto fallback; }
     }
+    ClockDiag_BootSet(hxtal_cycles, 1U, pll_ok, CLOCK_DIAG_SRC_PLL);
+    return;
+
+fallback:
+    RCU_CFG0 &= ~RCU_CFG0_SCS;
+    while ((RCU_CFG0 & RCU_CFG0_SCSS) != RCU_SCSS_IRC8M) {
+    }
+    RCU_CTL &= ~RCU_CTL_PLLEN;
+    ClockDiag_BootSet(hxtal_cycles, 1U, pll_ok, CLOCK_DIAG_SRC_IRC8M);
 }
 #endif /* __SYSTEM_CLOCK_IRC8M */
 
