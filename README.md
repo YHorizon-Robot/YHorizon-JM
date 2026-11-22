@@ -121,7 +121,7 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 | `hardware/bom/` | 元器件 BOM |
 | `firmware/` | GD32F303 固件 1.6。板级参数在 `firmware/Boards/YH_JM/` |
 | `host-rs/` | Rust 上位机 0.3.0 |
-| `sdk/` | 通信 SDK 0.1.0。`sdk/python/joint_gui.py` 仍是 RS05 / DM4310 联调界面 |
+| `sdk/` | 通信 SDK 0.1.0。`sdk/python/joint_gui.py` 仍是 RS05 / CyberGear / DM4310 联调界面 |
 | `sdk/protocol/` | CAN 协议 |
 | `docs/` | 校准、电流环、多轴同步、Ubuntu 说明，以及尚未做进固件的协议兼容笔记 |
 | `tools/` | 环境、编译、烧录脚本 |
@@ -148,7 +148,7 @@ Ubuntu：
 ./tools/run-gui.sh
 ```
 
-`setup-env.sh` 缺什么就用 apt 装什么，并为 RS05 / DM4310 联调界面创建 `sdk/python/.venv`。烧录探针为 CMSIS-DAP + SWD。发行版 OpenOCD 一般没有 `gd32f30x` 驱动，脚本会改用 `tools/openocd-gd32f303-stm32f1x.cfg`（按 256 KB，且不做 `mass_erase`）。工厂自检固件用 preset `gd32f303-factory`。
+`setup-env.sh` 缺什么就用 apt 装什么，并为 RS05 / CyberGear / DM4310 联调界面创建 `sdk/python/.venv`。烧录探针为 CMSIS-DAP + SWD。发行版 OpenOCD 一般没有 `gd32f30x` 驱动，脚本会改用 `tools/openocd-gd32f303-stm32f1x.cfg`（按 256 KB，且不做 `mass_erase`）。工厂自检固件用 preset `gd32f303-factory`。
 
 电机参数在 `firmware/Boards/YH_JM/board_config.h`。切回电压内环仍改 `firmware/App/config.h` 的 `CFG_INNER_LOOP`。
 
@@ -189,17 +189,45 @@ with Bus("socketcan", "can0") as bus:
 
 Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_group` 的说明都在 [sdk/README.md](sdk/README.md)。
 
-`joint_gui.py` 是另一套界面，只用来对照 RS05 / DM4310 的帧，不控制本仓库固件的 Motor Protocol V1.0。在 `sdk/python` 下执行 `python joint_gui.py`（依赖 `requirements.txt`）。编解码单测：`python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`。
+`joint_gui.py` 是另一套界面，只用来对照 RS05 / CyberGear / DM4310 的帧，不控制本仓库固件的 Motor Protocol V1.0。在 `sdk/python` 下执行 `python joint_gui.py`（依赖 `requirements.txt`）。编解码单测：`python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`。
 
 ### DM4310 MIT 台架镜像
 
-用 `.\tools\build.ps1 -Preset gd32f303-dm4310`（Linux 用 `./tools/build.sh --preset gd32f303-dm4310`）生成独立镜像。先在原生 V1 上完成本机校准、标零并设置节点 1–15，停机后按页刷写对应 ELF。换回同版 V1 可维护原有校准参数。此镜像采用经典 CAN 1 Mbps，收节点号，反馈 ID 为 `0x10 + 节点号`。例如节点 1 用 `python sdk/python/joint_gui.py --protocol DM4310 --node 1 --host 0x11`。RS05 当前仅有主机端编解码。
+用 `.\tools\build.ps1 -Preset gd32f303-dm4310`（Linux 用 `./tools/build.sh --preset gd32f303-dm4310`）生成独立镜像。先在原生 V1 上完成本机校准、标零并设置节点 1–15，停机后按页刷写对应 ELF。换回同版 V1 可维护原有校准参数。此镜像采用经典 CAN 1 Mbps，收节点号，反馈 ID 为 `0x10 + 节点号`。例如节点 1 用 `python sdk/python/joint_gui.py --protocol DM4310 --node 1 --host 0x11`。
 
 首版支持 MIT 五字段、使能 FC、失能 FD、清故障 FB，以及定向只读寄存器 7/8/9/10/21/22/23。可先发送标准帧 `7FF#0100331500000000` 读取节点 1 的 PMAX，预期 `011#0100331500004841`。运动前检查机械行程，在 GUI 选择“自由”（Kp、Kd、前馈为零），以 100 Hz 连续发送，再点使能。收到使能或最后一条运动指令后 100 ms 超时关桥，需要重新使能。兼容层忽略寄存器写入；收到 FE 时关桥，不保存零点、不回成功应答。
 
 P/V/T 线量程分别为 ±12.5 rad、±30 rad/s、±10 Nm。位置为相对本机机械零点的输出轴绝对目标，反馈超出编码范围时饱和。台架镜像把含齿槽补偿的 Iq 目标限制在 ±1 A。反馈力矩为按实测 Iq 换算的输出轴估计值，D6 为板温（不可用时填 0），D7 填 0。原厂主控互通及实物关桥延迟待台架验证。
 
 在本机测试通信状态机和报文字节可运行 `cmake -S firmware/tests -B firmware/build/host-tests -G Ninja`、`cmake --build firmware/build/host-tests`、`ctest --test-dir firmware/build/host-tests --output-on-failure`。
+
+### 切换到其他 CAN 台架镜像
+
+每个镜像使用一种型号配置，经典 CAN 1 Mbps。以下报文示例均为节点 1。首次使用先在 V1 下设置节点、校准并保存机械零位。速度或位置控制还需在 V1 下整定速度 PI 和位置环。换协议时先停止旧主机发送并关桥，在同一台电机上按页刷目标 ELF，再连接对应的主机。RS05 与小米、DM 与 AK、两款 DJI 均有可相互匹配的控制帧，同一条总线上的所有发送端须使用相符的量程。原厂上位机对未实现参数写入的依赖需要逐版本实测。
+
+| 构建 preset 后缀 | 关桥时的连通检查 | 解锁、运动及停机 |
+| --- | --- | --- |
+| `rs05`、`cybergear` | EXT `0000FD01#0000000000000000` → EXT `000001FE`，8 字节芯片标识 | 主站固定 `FD`。type 3 使能，1 阻抗，2 回传，4 停止或清错。6 在已标定、失能且速度 ≤0.05 rad/s 时设置 RAM 零，复位恢复持久基准。17 可读 7005/7019/701B/701C（十六进制）；18 写入及保存命令关闭。节点 1–63 |
+| `ak60-6` | STD `001#FFFFFFFFFFFFFFFD`，失能并在同 ID 回报，D0 为节点 | MIT 的 FC 使能、FD 失能；位置/速度/力矩量程 ±12.5 rad、±45 rad/s、±15 Nm。D6 为板温 +40，D7 为故障码。节点 1–63，持久零位用 V1。[CubeMars AK 手册 §5.3](https://www.cubemars.com/images/file/20240523/1716429938564781.pdf) |
+| `rmd-x` | STD `141#9C00000000000000` → `241`。92 读多圈角，D4–7 为有符号 32 位 | V3.91。A1 零电流解锁，后续 A1 电流、A2 速度、A4 带限速的绝对位置。80 关桥。台架版将 81 也处理为关桥，需重新解锁，依赖主动制动的主机不适用。节点 1–32。[MyActuator V3.91](https://teika-machine.co.jp/wp-content/uploads/2024/10/RMD-X-Motor-Motion-Protocol-V3.91.pdf) |
+| `lk-mf` | 同一 9C 请求，回复也是 STD `141`。92 的 D1–7 为有符号 56 位 | MF V2.35。88 使能，A1/A2/A4 控制，80/81 关桥。将 JM1 输出轴视为 MF 轴，9C 报 14 位单圈角；A1 的 ±2048 对应 ±16.5 A，9C/A2/A4 回复依照各自表格用 ±33 A。节点 1–32。[MF V2.35 §4–5](https://www.scribd.com/document/789874778/MS-MF-RMD-motor-CAN-protocol-V2-35-3-1) |
+| `hightorque` | EXT `00008001#1701` → EXT `00000100#2701…`；也接受该查询补零到 8 字节 | 经典 CAN，主站 0，节点 1–63。4 字节 `05 13 00 00` 解锁，后续同命令的小端 int16 为纯力矩。3 字节 `01 00 00` 停机。采用 STM32 示例定标，位置 0.0001 圈、速度 0.00025 圈/s、力矩 0.01 Nm。厂商手册还列有其他速度单位和型号拟合系数，原控实测前仅按此示例联调。混控、广播、FD 和校准命令关闭。[高擎经典 CAN 示例 §3.2](https://hightorque.cn/en/wp-content/uploads/2024/05/High-TorqueDebugging-Manual.pdf) |
+| `c620`、`c610` | 被动监听 STD `201`，目标周期 1 ms。节点 1–4 收 `200`，5–8 收 `1FF` | 本槽大端 int16 零电流解锁，新帧非零才出力。C620 为 ±16384 ↔ ±20 A，C610 为 ±10000 ↔ ±10 A；两款均受 JM1 台架限流。反馈角度/转速取实际转子侧，C620 D6 报板温，C610 D6–7 为零。用本槽零电流停止，停发超时后需再发零。[DJI C610 CAN 指南](https://rm-static.djicdn.com/tem/17348/RoboMaster%20C610%20Brushless%20DC%20Motor%20Speed%20Controller%20User%20Guide.pdf) |
+
+RS05 沿用仓库 SDK 的两套量程，控制为 ±12.57 rad、±33 rad/s、±14 Nm，反馈为 ±4π rad、±50 rad/s、±5.5 Nm。CyberGear 收发均为 ±4π rad、±30 rad/s、±12 Nm。两种镜像均可用 Python GUI 的同名选项联调。RMD-X/LK 的 A2、A4 需要有效外环增益。各型号使用校准结果加载时确定的输出轴方向，温度字段取 JM1 板温，输出力矩按实测 Iq 估算。
+
+**构建、刷写与回退**（仓库根目录）：
+
+```powershell
+.\tools\build.ps1 -Preset gd32f303-cybergear
+# 确认已停机且旧主机停发后，选择这一型号
+.\tools\flash.ps1 -Preset gd32f303-cybergear
+python sdk/python/joint_gui.py --protocol CyberGear --node 1 --host 0xFD
+```
+
+各镜像保留 V1 的 A/B 和 legacy 校准页。只换镜像时复用本机校准；更换电机、编码器或相线后回 V1 重校。所有兼容镜像将含补偿的 Iq **目标**限制在 ±1 A，100 ms 未续期会在主循环关桥；查询不续期，掉线或 CAN 接收丢失后需重新握手。原厂主控互通、实际峰值电流、最坏关桥延迟和 DJI 多机反馈负载仍需台架测量。
+
+运行 `python tools/package-compat.py` 可重建九个兼容镜像与同版 V1，生成 `firmware/build/JM1-CAN-bench.zip`。包内 manifest 记录各 ELF 的 SHA-256 与 Flash 加载末址，脚本校验所有有效加载段均在 `0x08000000..0x0803E7FF` 内。回退时停机、停发，将包内 `JM1-v1.elf` 解压后用 `.\tools\flash.ps1 -ElfFile <文件路径>` 按页刷回，并在 V1 下复读原机参数。
 
 ## 商业合作
 

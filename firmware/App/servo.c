@@ -492,8 +492,8 @@ static uint8_t Servo_UpdatePwmEncoder(void)
 
 static inline void Servo_RunCurrent(float elec, float signed_ref, uint8_t early)
 {
-#if CFG_DM4310
-  const float limit = CFG_DM4310_BENCH_I_LIMIT_A;
+#if CFG_CAN_COMPAT
+  const float limit = CFG_CAN_COMPAT_BENCH_I_LIMIT_A;
 #else
   const float limit = CFG_I_LIMIT_A;
 #endif

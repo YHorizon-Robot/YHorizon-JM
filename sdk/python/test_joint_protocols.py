@@ -14,6 +14,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from joint_protocols import (  # noqa: E402
     Command,
+    CyberGear,
+    protocol_by_name,
     DM_STATUS,
     Dm4310,
     Feedback,
@@ -36,6 +38,20 @@ class ConversionTest(unittest.TestCase):
         self.assertEqual(f2u(99.0, -12.5, 12.5, 16), 65535)
         self.assertEqual(f2u(-99.0, -12.5, 12.5, 16), 0)
         self.assertEqual(f2u(float("nan"), -12.5, 12.5, 16), 0)
+
+
+class CyberGearTest(unittest.TestCase):
+    def test_ranges_and_address(self) -> None:
+        proto = protocol_by_name("CyberGear")
+        self.assertIsInstance(proto, CyberGear)
+        arb, data = proto.make_control(2, 0xFD, Command(vel=30, tau=12))
+        self.assertEqual((arb, data[2:4]), (0x01FFFF02, bytes.fromhex("ffff")))
+        feedback = bytes.fromhex("0000 ffff ffff 010e")
+        parsed = proto.parse_feedback(0x028002FD, feedback)
+        self.assertAlmostEqual(parsed.tau, 12)
+        self.assertAlmostEqual(parsed.vel, 30)
+        self.assertIsNone(proto.parse_feedback(0x228002FD, feedback))
+        self.assertIsNone(proto.parse_feedback(0x028002FD, feedback + bytes(1)))
 
 
 class Rs05Test(unittest.TestCase):

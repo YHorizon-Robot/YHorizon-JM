@@ -7,6 +7,19 @@
 
 static volatile uint32_t s_tick_ms;
 
+#if CFG_RS05 || CFG_CYBERGEAR
+/* First two words of the GD32F30x electronic signature. */
+void Board_GetUid64(uint8_t uid[8])
+{
+  const volatile uint32_t *signature = (const volatile uint32_t *)0x1FFFF7E8U;
+  for (unsigned word = 0; word < 2; ++word)
+  {
+    uint32_t bits = signature[word];
+    for (unsigned i = 0; i < 4; ++i) { uid[word * 4 + i] = (uint8_t)(bits >> (8U*i)); }
+  }
+}
+#endif
+
 static void Board_GpioInit(void)
 {
   rcu_periph_clock_enable(RCU_GPIOA);

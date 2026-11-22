@@ -141,7 +141,7 @@ class Rs05:
     ## 反馈方向
 
     def parse_feedback(self, arb: int, data: bytes) -> Feedback | None:
-        if ((arb >> 24) & 0x1F) != RS05_TYPE_FEEDBACK or len(data) < 8:
+        if (arb >> 24) != RS05_TYPE_FEEDBACK or len(data) != 8:
             return None
         pos_u, vel_u, tau_u, temp_u = struct.unpack(">HHHH", data[:8])
         r = self.feedback
@@ -170,7 +170,7 @@ class Rs05:
 
     def parse_control(self, arb: int, data: bytes) -> tuple[int, Command] | None:
         """给模拟从站用：从控制帧解出 (电机 ID, 目标量)。"""
-        if ((arb >> 24) & 0x1F) != RS05_TYPE_CONTROL or len(data) < 8:
+        if (arb >> 24) != RS05_TYPE_CONTROL or len(data) != 8:
             return None
         r = self.control
         pos_u, vel_u, kp_u, kd_u = struct.unpack(">HHHH", data[:8])
@@ -259,7 +259,7 @@ class Dm4310:
     ## 反馈方向
 
     def parse_feedback(self, arb: int, data: bytes) -> Feedback | None:
-        if len(data) < 8:
+        if len(data) != 8:
             return None
         r = self.feedback
         pos_u = (data[1] << 8) | data[2]
@@ -295,7 +295,7 @@ class Dm4310:
         return host & 0x7FF, data
 
     def parse_control(self, arb: int, data: bytes) -> tuple[int, Command] | None:
-        if len(data) < 8 or (arb < 0 or arb > 0x7FF):
+        if len(data) != 8 or (arb < 0 or arb > 0x7FF):
             return None
         if data[:7] == b"\xff" * 7:
             return None
@@ -315,7 +315,16 @@ class Dm4310:
         return arb & 0x7FF, cmd
 
 
+class CyberGear(Rs05):
+    """小米 CyberGear，运动指令和反馈均采用手册 §4.1 量程。"""
+
+    name = "CyberGear"
+    control = feedback = Ranges(p_max=12.566370614, v_max=30.0, t_max=12.0)
+
+
 def protocol_by_name(name: str) -> Rs05 | Dm4310:
+    if name.upper() == "CYBERGEAR":
+        return CyberGear()
     return Dm4310() if name.upper().startswith("DM") else Rs05()
 
 

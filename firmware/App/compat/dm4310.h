@@ -1,7 +1,7 @@
 #ifndef DM4310_H
 #define DM4310_H
 
-#include <stdint.h>
+#include "mit_wire.h"
 
 #define DM4310_TIMEOUT_MS 100U
 #define DM4310_REGISTER_ID 0x7FFU
@@ -17,10 +17,7 @@ typedef enum
   DM_RESERVED = 0xFF
 } DmCommand;
 
-typedef struct
-{
-  float position, velocity, kp, kd, torque;
-} DmMotion;
+typedef MitMotion DmMotion;
 
 static inline uint16_t Dm_FeedbackId(uint8_t node) { return 0x10U + node; }
 DmCommand Dm_Decode(const uint8_t data[8], DmMotion *motion);

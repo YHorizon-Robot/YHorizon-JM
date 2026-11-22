@@ -37,6 +37,70 @@
             "cacheVariables": {
                 "YFOC_FACTORY_TEST": "ON"
             }
+        },
+        {
+            "name": "gd32f303-rs05",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM rs05 (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "rs05"
+            }
+        },
+        {
+            "name": "gd32f303-cybergear",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM cybergear (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "cybergear"
+            }
+        },
+        {
+            "name": "gd32f303-ak60-6",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM ak60-6 (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "ak60-6"
+            }
+        },
+        {
+            "name": "gd32f303-rmd-x",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM rmd-x (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "rmd-x"
+            }
+        },
+        {
+            "name": "gd32f303-lk-mf",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM lk-mf (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "lk-mf"
+            }
+        },
+        {
+            "name": "gd32f303-hightorque",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM hightorque (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "hightorque"
+            }
+        },
+        {
+            "name": "gd32f303-c620",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM c620 (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "c620"
+            }
+        },
+        {
+            "name": "gd32f303-c610",
+            "inherits": "gd32f303",
+            "displayName": "YH_JM c610 (bench)",
+            "cacheVariables": {
+                "CAN_PROTOCOL": "c610"
+            }
         }
     ],
     "buildPresets": [
@@ -55,6 +119,38 @@
         {
             "name": "gd32f303-factory",
             "configurePreset": "gd32f303-factory"
+        },
+        {
+            "name": "gd32f303-rs05",
+            "configurePreset": "gd32f303-rs05"
+        },
+        {
+            "name": "gd32f303-cybergear",
+            "configurePreset": "gd32f303-cybergear"
+        },
+        {
+            "name": "gd32f303-ak60-6",
+            "configurePreset": "gd32f303-ak60-6"
+        },
+        {
+            "name": "gd32f303-rmd-x",
+            "configurePreset": "gd32f303-rmd-x"
+        },
+        {
+            "name": "gd32f303-lk-mf",
+            "configurePreset": "gd32f303-lk-mf"
+        },
+        {
+            "name": "gd32f303-hightorque",
+            "configurePreset": "gd32f303-hightorque"
+        },
+        {
+            "name": "gd32f303-c620",
+            "configurePreset": "gd32f303-c620"
+        },
+        {
+            "name": "gd32f303-c610",
+            "configurePreset": "gd32f303-c610"
         }
     ]
 }

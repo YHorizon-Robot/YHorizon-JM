@@ -73,7 +73,8 @@ class BusLink(QtCore.QThread):
                 except Exception as exc:  # noqa: BLE001
                     self.failed.emit(f"接收失败: {exc}")
                     break
-                if msg is not None:
+                if (msg is not None and not msg.is_remote_frame and not msg.is_error_frame
+                        and not msg.is_fd and msg.dlc == len(msg.data)):
                     self.received.emit(
                         int(msg.arbitration_id), bytes(msg.data), bool(msg.is_extended_id)
                     )

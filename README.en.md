@@ -121,7 +121,7 @@ Use of the project must meet the GPLv3 and CERN-OHL-S obligations. To keep deriv
 | `hardware/bom/` | Electronics BOM |
 | `firmware/` | GD32F303 firmware 1.6. Board parameters live in `firmware/Boards/YH_JM/` |
 | `host-rs/` | Rust host 0.3.0 |
-| `sdk/` | Communication SDK 0.1.0. `sdk/python/joint_gui.py` is still the RS05 / DM4310 debug UI |
+| `sdk/` | Communication SDK 0.1.0. `sdk/python/joint_gui.py` is still the RS05 / CyberGear / DM4310 debug UI |
 | `sdk/protocol/` | CAN protocol |
 | `docs/` | Commissioning, current loop, group sync, Ubuntu notes, and protocol-compatibility notes not yet in the firmware |
 | `tools/` | Setup, build, and flash scripts |
@@ -148,7 +148,7 @@ Ubuntu:
 ./tools/run-gui.sh
 ```
 
-`setup-env.sh` installs missing packages with apt and creates `sdk/python/.venv` for the RS05 / DM4310 debug UI. The debug probe is CMSIS-DAP over SWD. Distro OpenOCD usually has no `gd32f30x` driver; the script falls back to `tools/openocd-gd32f303-stm32f1x.cfg` (256 KB, no `mass_erase`). The factory self-test firmware uses preset `gd32f303-factory`.
+`setup-env.sh` installs missing packages with apt and creates `sdk/python/.venv` for the RS05 / CyberGear / DM4310 debug UI. The debug probe is CMSIS-DAP over SWD. Distro OpenOCD usually has no `gd32f30x` driver; the script falls back to `tools/openocd-gd32f303-stm32f1x.cfg` (256 KB, no `mass_erase`). The factory self-test firmware uses preset `gd32f303-factory`.
 
 Motor parameters are in `firmware/Boards/YH_JM/board_config.h`. To switch back to the voltage inner loop, change `CFG_INNER_LOOP` in `firmware/App/config.h`.
 
@@ -189,7 +189,7 @@ with Bus("socketcan", "can0") as bus:
 
 On Windows use `Bus("pcan", "PCAN_USBBUS1")`. Queries, modes, disable, and `run_group` are documented in [sdk/README.md](sdk/README.md).
 
-`joint_gui.py` is a separate window for RS05 / DM4310 frames. It does not speak this repository's Motor Protocol V1.0. From `sdk/python`, run `python joint_gui.py` (dependencies are in `requirements.txt`). Codec test: `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
+`joint_gui.py` is a separate window for RS05 / CyberGear / DM4310 frames. It does not speak this repository's Motor Protocol V1.0. From `sdk/python`, run `python joint_gui.py` (dependencies are in `requirements.txt`). Codec test: `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
 
 ### DM4310 MIT bench image
 
@@ -197,7 +197,22 @@ Build with `.\tools\build.ps1 -Preset gd32f303-dm4310` or `./tools/build.sh --pr
 
 The image handles MIT motion, FC enable, FD disable, FB clear and directed read-only registers 7/8/9/10/21/22/23. For a stationary connection check, send `7FF#0100331500000000` and expect `011#0100331500004841` (PMAX = 12.5 rad). Start a zero-gain, zero-feedforward stream at 100 Hz before enabling. Enable and accepted motion commands have a 100 ms deadline; re-enable after a timeout. FE disarms without saving a zero or acknowledging success. Register writes are ignored.
 
-Position targets use absolute output-shaft radians relative to the JM1 zero. Feedback saturates at the wire limits of ±12.5 rad, ±30 rad/s and ±10 Nm. The bench cap is ±1 A on total Iq demand including cogging compensation. Torque feedback is estimated from measured Iq, D6 reports board temperature (0 if unavailable) and D7 is 0. Hardware timing and vendor-host interoperability still require bench validation. RS05 support is currently host-side.
+Position targets use absolute output-shaft radians relative to the JM1 zero. Feedback saturates at the wire limits of ±12.5 rad, ±30 rad/s and ±10 Nm. The bench cap is ±1 A on total Iq demand including cogging compensation. Torque feedback is estimated from measured Iq, D6 reports board temperature (0 if unavailable) and D7 is 0. Hardware timing and vendor-host interoperability still require bench validation.
+
+### Other CAN bench profiles
+
+Choose `gd32f303-<profile>` in the build and flash scripts. All profiles use classic CAN at 1 Mbps, a 100 ms command deadline and a ±1 A total Iq demand cap. Calibrate, set the node ID and save mechanical zero in V1. Stop the drive and the old host's transmit stream before page-flashing another image. Some families share wire formats with different scales. Use a matching host on the bus. A fresh handshake is required after timeout or RX loss.
+
+| Profile | Supported bench commands | Initial connection check for node 1 |
+| --- | --- | --- |
+| `rs05`, `cybergear` | Fixed host 0xFD, nodes 1–63. Types 3/1/4 enable, command and stop/clear. Type 6 sets a stationary, disabled RAM zero. Type 17 reads 7005, 7019, 701B and 701C (hex). RS05 command ranges are ±12.57/33/14 and feedback ±4π/50/5.5 in rad, rad/s and Nm. CyberGear uses ±4π/30/12 both ways. | EXT `0000FD01#0000000000000000` → EXT `000001FE` with chip ID |
+| `ak60-6` | AK60-6 MIT, nodes 1–63. FC enables, FD disables. ±12.5 rad, ±45 rad/s, ±15 Nm. Board temperature +40 in D6. | STD `001#FFFFFFFFFFFFFFFD` disables and returns status on STD 001 |
+| `rmd-x` | V3.91, nodes 1–32. Arm with A1 zero current. A1/A2/A4 select current, speed and speed-limited absolute position. 80 and 81 gate off and require rearming. Hosts requiring active braking on 81 need a different implementation. | STD `141#9C00000000000000` → STD 241. 92 returns signed 32-bit angle in D4–7 |
+| `lk-mf` | MF V2.35, nodes 1–32. 88 enables, A1/A2/A4 control, 80/81 gate off. The MF shaft is represented by the JM1 output shaft. A1 scales ±2048 to ±16.5 A, 9C/A2/A4 replies use ±33 A. | Same 9C query → STD 141. 92 returns signed 56-bit angle in D1–7 |
+| `hightorque` | Classic CAN STM32 example dialect, source 0, nodes 1–63. `05 13 00 00` arms. Subsequent torque is signed LE16 at 0.01 Nm/LSB. `01 00 00` stops. Feedback uses 0.0001 turn and 0.00025 turn/s per count. Other vendor tables use different scales. | EXT `00008001#1701` → EXT `00000100#2701…` |
+| `c620`, `c610` | Nodes 1–8. A zero in the addressed slot arms or removes torque. A subsequent nonzero group command drives. Rotor angle and rpm, measured current, C620 board temperature. | Listen for STD 201, nominally every 1 ms |
+
+Tune the native speed and position loops before using A2/A4. Persistent calibration and zero stay in V1. Current, temperature and timing need hardware validation on each target host. The Python GUI accepts `--protocol CyberGear`, `RS05` or `DM4310`. Run `python tools/package-compat.py` to build the bench archive with model-named ELFs, the native rollback ELF and a SHA-256 manifest. Packaging checks all file-backed LOAD segments against the start of calibration flash at 0x0803E800. After stopping and disconnecting the old controller, use `.\tools\flash.ps1 -ElfFile <extracted-ELF>` for rollback.
 
 ## Commercial cooperation
 

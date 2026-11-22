@@ -1,4 +1,4 @@
-"""RS05 / DM4310 关节调试上位机。
+"""RS05 / CyberGear / DM4310 关节调试上位机。
 
 在 sdk/python 目录下运行：
     python joint_gui.py
@@ -45,7 +45,7 @@ def _hex(data: bytes) -> str:
 class MainWindow(QtWidgets.QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("YHorizon-JM · RS05 / DM4310 调试上位机")
+        self.setWindowTitle("YHorizon-JM · RS05 / CyberGear / DM4310 调试上位机")
         self.resize(1200, 780)
 
         self.protocol: Rs05 | Dm4310 = protocol_by_name("RS05")
@@ -105,7 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
         grid.setHorizontalSpacing(8)
 
         self.proto_combo = QtWidgets.QComboBox()
-        self.proto_combo.addItems(["RS05", "DM4310"])
+        self.proto_combo.addItems(["RS05", "CyberGear", "DM4310"])
         self.proto_combo.currentTextChanged.connect(self._on_protocol_changed)
 
         self.iface_combo = QtWidgets.QComboBox()
@@ -362,6 +362,8 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         self.protocol = protocol_by_name(name)
         self._apply_protocol()
+        for field in (self.pos_spin, self.vel_spin, self.kp_spin, self.kd_spin, self.tau_spin):
+            field.setValue(0)
 
     def _apply_protocol(self) -> None:
         proto = self.protocol
@@ -379,7 +381,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.host_spin.setValue(0xFD if is_rs05 else 0x10 + self.node_spin.value())
         self.btn_ping.setEnabled(is_rs05)
 
-        if is_rs05:
+        if proto.name == "CyberGear":
+            self.range_label.setText("CyberGear 控制及反馈量程：位置 ±4π rad · 速度 ±30 rad/s · 力矩 ±12 Nm")
+        elif is_rs05:
             self.range_label.setText(
                 "RS05 控制量程：位置 ±12.57 rad · 速度 ±33 rad/s · Kp 0..500 · Kd 0..5 · 力矩 ±14 Nm\n"
                 "反馈量程：位置 ±4π · 速度 ±50 rad/s · 力矩 ±5.5 Nm；29 位扩展帧。"
@@ -611,13 +615,15 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(int, bytes, bool)
     def _on_frame(self, arb: int, data: bytes, extended: bool) -> None:
         self._rx_count += 1
-        if isinstance(self.protocol, Rs05) and extended and ((arb >> 24) & 0x1F) == 0:
+        if (isinstance(self.protocol, Rs05) and extended and len(data) == 8
+                and arb == ((self.node_spin.value() << 8) | 0xFE)):
             self._log(f"RX EXT 0x{arb:08X} [{_hex(data)}] Ping 应答")
             return
 
         fb = None
         if isinstance(self.protocol, Rs05):
-            if extended:
+            if (extended and len(data) == 8 and (arb & 0xFFFF) ==
+                    ((self.node_spin.value() << 8) | self.host_spin.value())):
                 fb = self.protocol.parse_feedback(arb, data)
             kind = "EXT" if extended else "STD"
         else:
@@ -664,6 +670,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.val_state.setStyleSheet("font-size: 16px; font-weight: 600; color: #080;")
 
     def _clear_feedback(self) -> None:
+        self.last_feedback = None
+        self._last_fault_text = ""
+        self._fb_times.clear()
         for label in (self.val_pos, self.val_deg, self.val_vel, self.val_tau, self.val_temp, self.val_rate):
             label.setText("—")
         self.val_state.setText("—")
@@ -717,11 +726,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="RS05 / DM4310 关节调试上位机")
+    parser = argparse.ArgumentParser(description="RS05 / CyberGear / DM4310 关节调试上位机")
     parser.add_argument("--interface", default=None, help="python-can 接口，如 pcan/slcan/socketcan/virtual")
     parser.add_argument("--channel", default=None, help="通道名，如 CAN1 / can0 / vcan0")
     parser.add_argument("--bitrate", type=int, default=1_000_000)
-    parser.add_argument("--protocol", default="RS05", choices=["RS05", "DM4310"])
+    parser.add_argument("--protocol", default="RS05", choices=["RS05", "CyberGear", "DM4310"])
     parser.add_argument("--node", type=int, default=1)
     parser.add_argument("--host", type=lambda x: int(x, 0), default=None)
     parser.add_argument("--sim", action="store_true", help="在 virtual 接口上启动内置模拟从站")

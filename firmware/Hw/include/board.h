@@ -7,6 +7,7 @@
 extern "C" {
 #endif
 
+void Board_GetUid64(uint8_t uid[8]);
 void Board_Init(void);
 void Board_DwtInit(void);
 uint32_t Board_DwtGetCycles(void);
