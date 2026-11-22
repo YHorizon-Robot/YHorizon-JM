@@ -19,6 +19,7 @@ void Commission_ApplyControl(void);
 float Commission_LegacyZero(float aligned_zero);
 uint8_t Commission_OwnsGains(void);
 uint8_t Commission_SaveGains(void);
+float Commission_PhaseResistance(void);
 float Commission_CurrentBandwidth(void);
 float Commission_Cogging(uint16_t raw);
 

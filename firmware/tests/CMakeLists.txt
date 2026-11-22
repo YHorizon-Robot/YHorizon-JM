@@ -22,3 +22,17 @@ foreach(model rs05 cybergear ak60-6 rmd-x lk-mf hightorque c620 c610)
     endif()
     add_test(NAME "${model}_session_and_codec" COMMAND ${target})
 endforeach()
+
+foreach(compat 0 1)
+    set(target "commission_profile_${compat}_test")
+    add_executable(${target} commission_profile_test.c ../App/cali_nv.c ../App/cali.c
+        ../App/commission.c ../App/servo.c ../Foc/foc_current.c ../Foc/foc_encoder.c
+        ../Foc/foc_math.c ../Foc/foc_svpwm.c ../Foc/foc_vernier.c)
+    target_compile_features(${target} PRIVATE c_std_11)
+    target_compile_definitions(${target} PRIVATE CFG_COMMISSION=1 CFG_CAN_COMPAT=${compat})
+    target_include_directories(${target} PRIVATE ../App ../Boards/YH_JM ../Hw/include ../Foc)
+    if(NOT MSVC)
+        target_link_libraries(${target} PRIVATE m)
+    endif()
+    add_test(NAME ${target} COMMAND ${target})
+endforeach()

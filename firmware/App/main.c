@@ -90,7 +90,7 @@ int main(void)
                  (int)(tel.t_ref * 1000.0f),
                  (int)(tel.iq * 100.0f),
                  (int)(tel.torque_nm * 1000.0f),
-                 (int)(Cfg_StallTorqueNm(Adc_GetVbusVolts()) * 1000.0f),
+                 (int)(Cfg_StallTorqueNm(Adc_GetVbusVolts(), Commission_PhaseResistance()) * 1000.0f),
                  (int)(Adc_GetVbusVolts() * 100.0f));
     }
   }

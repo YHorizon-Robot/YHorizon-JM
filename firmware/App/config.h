@@ -114,7 +114,9 @@ extern "C" {
 #define CFG_I_LIMIT_A               (20.0f)
 #if CFG_CAN_COMPAT
 /* Initial bench image: cap total q-axis demand, including cogging compensation. */
-#define CFG_CAN_COMPAT_BENCH_I_LIMIT_A   (1.0f)
+#define CFG_DRIVE_I_LIMIT_A          (1.0f)
+#else
+#define CFG_DRIVE_I_LIMIT_A          CFG_I_LIMIT_A
 #endif
 
 /**
@@ -130,18 +132,18 @@ static inline float Cfg_MotorTorqueNm(float iq_a)
  * @brief 当前母线下堵转、Id 为 0 时电机轴能达到的力矩。
  *        电流取软件上限和相电压/相电阻的较小值，相电压为 Vbus × CFG_V_LIMIT。
  */
-static inline float Cfg_StallTorqueNm(float vbus_v)
+static inline float Cfg_StallTorqueNm(float vbus_v, float phase_resistance)
 {
   float i_avail;
 
-  if (!(vbus_v > 0.0f) || !(CFG_MOTOR_R_OHM > 0.0f))
+  if (!(vbus_v > 0.0f) || !(phase_resistance > 0.0f))
   {
     return 0.0f;
   }
-  i_avail = (CFG_V_LIMIT * vbus_v) / CFG_MOTOR_R_OHM;
-  if (i_avail > CFG_I_LIMIT_A)
+  i_avail = (CFG_V_LIMIT * vbus_v) / phase_resistance;
+  if (i_avail > CFG_DRIVE_I_LIMIT_A)
   {
-    i_avail = CFG_I_LIMIT_A;
+    i_avail = CFG_DRIVE_I_LIMIT_A;
   }
   return Cfg_MotorTorqueNm(i_avail);
 }

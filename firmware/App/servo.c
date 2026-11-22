@@ -87,11 +87,8 @@ static uint8_t s_temp_hot;
 static uint8_t s_temp_over;
 static uint32_t s_temp_ms;
 
-static void Servo_ResetOuterGains(void)
+void Servo_ResetFeedbackGains(void)
 {
-  s_kp = 0.0f;
-  s_kd = 0.0f;
-  s_t_ff = 0.0f;
   /* Current torque gain differs from the old voltage controller. Require
    * explicit velocity/position tuning instead of silently reusing it. */
   s_vel_kp = (s_inner_loop == CFG_INNER_LOOP_CURRENT) ? 0.0f : CFG_VEL_KP_DEFAULT;
@@ -99,6 +96,14 @@ static void Servo_ResetOuterGains(void)
   s_pos_kp = CFG_POS_KP_DEFAULT;
   s_pos_ki = CFG_POS_KI_DEFAULT;
   s_pos_kd = CFG_POS_KD_DEFAULT;
+}
+
+static void Servo_ResetOuterGains(void)
+{
+  s_kp = 0.0f;
+  s_kd = 0.0f;
+  s_t_ff = 0.0f;
+  Servo_ResetFeedbackGains();
 }
 
 static void Servo_ClearLoopState(void)
@@ -492,14 +497,14 @@ static uint8_t Servo_UpdatePwmEncoder(void)
 
 static inline void Servo_RunCurrent(float elec, float signed_ref, uint8_t early)
 {
-#if CFG_CAN_COMPAT
-  const float limit = CFG_CAN_COMPAT_BENCH_I_LIMIT_A;
-#else
-  const float limit = CFG_I_LIMIT_A;
-#endif
+  const float limit = CFG_DRIVE_I_LIMIT_A;
 #if (CFG_COMMISSION != 0U)
+  /* A zero-gain motion packet is a direct Iq/torque request, including
+   * DJI group current. Apply the learned disturbance only to tracking. */
+  const uint8_t tracking = s_ctrl_mode != SERVO_CTRL_MOTION || s_kp != 0.0f || s_kd != 0.0f;
+  const float compensation = s_cmd_valid && tracking ? Commission_Cogging(s_enc1_raw) : 0.0f;
   const float target = Foc_Clamp(Commission_LimitIq(
-      signed_ref * (CFG_I_LIMIT_A / CFG_V_LIMIT) + Commission_Cogging(s_enc1_raw),
+      signed_ref * (CFG_I_LIMIT_A / CFG_V_LIMIT) + compensation,
       s_closed_loop_dir), -limit, limit);
 #else
   const float target = Foc_Clamp(signed_ref * (CFG_I_LIMIT_A / CFG_V_LIMIT),

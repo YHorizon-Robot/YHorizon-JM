@@ -6,6 +6,7 @@
 #include "can.h"
 #include "config.h"
 #include "encoder.h"
+#include "debug.h"
 #include "foc_math.h"
 #include "foc_vernier.h"
 #include "nv_flash.h"
@@ -196,6 +197,8 @@ void Commission_Init(void)
       s_slot = slot;
     }
   }
+  Dbg_Printf("JM1 saved profile gen=%u flags=0x%x\r\n",
+             (unsigned)s_record.generation, (unsigned)s_record.words[FLAGS]);
 }
 
 static uint8_t Save(const uint32_t *words)
@@ -267,6 +270,11 @@ static void ApplyControl(const uint32_t *w)
 }
 
 void Commission_ApplyControl(void) { ApplyControl(s_record.words); }
+
+float Commission_PhaseResistance(void)
+{
+  return s_record.words[FLAGS] & HAS_RL ? Value(s_record.words[RS]) : CFG_MOTOR_R_OHM;
+}
 
 float Commission_CurrentBandwidth(void)
 {
@@ -617,7 +625,6 @@ uint8_t Commission_Current(float elec, float ia, float ib, float iq_ref)
 
 float Commission_Cogging(uint16_t raw)
 {
-  if (Servo_GetCtrlMode() == SERVO_CTRL_MOTION) { return 0.0f; }
   const uint32_t *w = s.state == RUN && s.kind == COG_CHECK ? s_stage : s_record.words;
   if (!(w[FLAGS] & HAS_COG) || (s.state == RUN && s.kind != COG_CHECK)) { return 0.0f; }
   const float idx = (float)raw * ((float)COG_POINTS / (float)ENCODER_CPR);
@@ -783,17 +790,34 @@ uint8_t Commission_Handle(const uint8_t data[8], uint32_t node, uint8_t calibrat
       {
         CaliNvData_t nv = {0};
         const uint8_t legacy_valid = CaliNv_Load(&nv);
+        const uint32_t removed = s_record.words[FLAGS] & ~s_stage[FLAGS];
         const ServoMode_t previous = Servo_PauseForFlash();
         const uint8_t angle_changed = (s_stage[FLAGS] & HAS_ENC) &&
             ((s_record.words[FLAGS] & (HAS_ENC | HAS_AUX)) != (s_stage[FLAGS] & (HAS_ENC | HAS_AUX)) ||
              s_stage[ENCODER] != s_record.words[ENCODER] || s_stage[OFFSET] != s_record.words[OFFSET]);
         if (!Save(s_stage)) { error = STORAGE; }
-        else if (angle_changed)
+        else
         {
-          if (!Commission_MergeAlignment(&nv, legacy_valid) || !Cali_ApplySaved(&nv)) { error = FAULT; }
-          else { aligned = 1U; }
+          /* Invalidating a tune restores the same fallback as a cold boot.
+           * Staging and failed flash writes do not change the live gains. */
+          if (removed & HAS_CURRENT)
+          {
+            const float wc = FOC_TWO_PI * CFG_CUR_BW_HZ;
+            Servo_SetCurrentGains(CFG_MOTOR_L_H * wc, CFG_MOTOR_R_OHM * wc);
+          }
+          if (removed & HAS_PID) { Servo_ResetFeedbackGains(); }
+          if (angle_changed || (removed & HAS_PID))
+          {
+            const uint8_t have_alignment = Commission_MergeAlignment(&nv, legacy_valid);
+            if (angle_changed)
+            {
+              if (!have_alignment || !Cali_ApplySaved(&nv)) { error = FAULT; }
+              else { aligned = 1U; }
+            }
+            else if (have_alignment) { Cali_ApplyUserGains(&nv); }
+          }
+          if (error == 0U) { Commission_ApplyControl(); }
         }
-        if (error == 0U) { Commission_ApplyControl(); }
         if (!aligned) { Servo_ResumeAfterFlash(previous); }
       }
       break;

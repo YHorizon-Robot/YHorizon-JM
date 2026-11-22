@@ -55,7 +55,7 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 | 总线 | Classic CAN 2.0，1 Mbps，Motor Protocol V1.0 |
 | 控制 | 固件 1.6。默认电流内环；可改电压内环。运控 / 速度 / 位置三模式，并支持 1～16 轴组同步 |
 
-上电校准或加载 Flash 参数后进入运控。电流环 PI 按仓库里的 WK4310H 相电阻、相电感整定。买到的电机参数可能不一样，电流环跑不通时，把 `firmware/App/config.h` 的 `CFG_INNER_LOOP` 改成 `CFG_INNER_LOOP_VOLTAGE`，重新编译即可切回电压内环。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
+JM1 上电读取本机保存的校准和整定结果。没有经过整定的电流 PI 时，使用 WK4310H 板级默认值。首次装配的单元用 `gd32f303` 镜像和 Rust 上位机的「校准与辨识」页完成设置。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
 
 测试视频：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
 
@@ -200,6 +200,14 @@ Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_gro
 P/V/T 线量程分别为 ±12.5 rad、±30 rad/s、±10 Nm。位置为相对本机机械零点的输出轴绝对目标，反馈超出编码范围时饱和。台架镜像把含齿槽补偿的 Iq 目标限制在 ±1 A。反馈力矩为按实测 Iq 换算的输出轴估计值，D6 为板温（不可用时填 0），D7 填 0。原厂主控互通及实物关桥延迟待台架验证。
 
 在本机测试通信状态机和报文字节可运行 `cmake -S firmware/tests -B firmware/build/host-tests -G Ninja`、`cmake --build firmware/build/host-tests`、`ctest --test-dir firmware/build/host-tests --output-on-failure`。
+
+### 首次校准和后续换协议
+
+1. **新装或参数区为空的 JM1**：刷 `gd32f303`，它使用 JM1 自有 CAN 协议 Motor Protocol V1.0。连接 Rust 上位机，读取节点，固定空载电机并确认可用行程。依次做编码器校准、机械标零、相电阻及 d/q 轴电感辨识、自动 PID 整定。需要低速平顺性时再做双向齿槽扫描。每项通过后保存并回读，再进行下一项。
+2. **已有本机有效记录**：可以继续用 JM1 自有协议，也可以停机、停发后用仓库脚本按页刷目标兼容镜像。两者加载同一组逐机参数。整片擦除会删除这些记录；更换电机、相线或编码器后，应重新确认电角度和方向并更新相关整定。重新保存 R/L 会撤销原自动整定标记和齿槽表，需重新整定；重新保存 PID 后需重新采集齿槽表。
+3. **核对运行效果**：Rust 上位机可读取并导出相电阻、Ld/Lq、各环增益和 256 点齿槽表。兼容镜像上电时可通过 RTT 看 `JM1 saved profile` 的代号与标志（十六进制位掩码：01 R/L、02 电流 PI、04 外环 PID、08 编码器、10 游标、20 齿槽）。调试输出 `tmax` 是按有效相电阻、母线和当前镜像电流上限估计的电机轴堵转力矩。
+
+低速速度、位置和有刚度或阻尼的阻抗指令会使用已启用的齿槽表。直接指定电流、纯力矩以及零增益自由模式保持主机要求的电流语义。阻抗报文中的 Kp/Kd 仍由主机给定，电流内环使用本机整定值。切换协议无需重新生成补偿表。
 
 ### 切换到其他 CAN 台架镜像
 

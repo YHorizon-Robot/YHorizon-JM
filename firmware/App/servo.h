@@ -94,6 +94,8 @@ void Servo_SetPositionGains(float kp, float ki, float kd);
 void Servo_GetPositionGains(float *kp, float *ki, float *kd);
 void Servo_SetCurrentGains(float kp, float ki);
 void Servo_GetCurrentGains(float *kp, float *ki);
+/* Restore the startup velocity/position gains while the bridge is gated. */
+void Servo_ResetFeedbackGains(void);
 void Servo_SetCtrlMode(uint8_t mode);
 uint8_t Servo_GetCtrlMode(void);
 

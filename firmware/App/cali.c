@@ -22,6 +22,21 @@ static uint8_t EncoderReady(void)
   return Foc_EncoderIsReady(Servo_GetEncoder()) && Servo_GetFault() == 0U;
 }
 
+void Cali_ApplyUserGains(const CaliNvData_t *nv)
+{
+  const uint16_t scale = Servo_GetInnerLoop() == CFG_INNER_LOOP_CURRENT
+      ? (uint16_t)((CFG_I_LIMIT_A / CFG_V_LIMIT) * 1000.0f + 0.5f) : 1000U;
+  if (nv->user_gains_valid && nv->user_gains_inner_loop == Servo_GetInnerLoop() &&
+      nv->user_gains_scale_milli == scale)
+  {
+    Servo_SetVelocityGains((float)nv->vel_kp_raw * CFG_KP_VEL_LSB,
+                           (float)nv->vel_ki_raw * CFG_KI_VEL_LSB);
+    Servo_SetPositionGains((float)nv->pos_kp_raw * CFG_KP_POS_LSB,
+                           (float)nv->pos_ki_raw * CFG_KI_POS_LSB,
+                           (float)nv->pos_kd_raw * CFG_KD_POS_LSB);
+  }
+}
+
 /* Loading an alignment never opens the power bridge. */
 uint8_t Cali_ApplySaved(const CaliNvData_t *nv)
 {
@@ -40,17 +55,7 @@ uint8_t Cali_ApplySaved(const CaliNvData_t *nv)
   }
 
   Adc_RefreshVbus();
-  const uint16_t scale = Servo_GetInnerLoop() == CFG_INNER_LOOP_CURRENT
-      ? (uint16_t)((CFG_I_LIMIT_A / CFG_V_LIMIT) * 1000.0f + 0.5f) : 1000U;
-  if (nv->user_gains_valid && nv->user_gains_inner_loop == Servo_GetInnerLoop() &&
-      nv->user_gains_scale_milli == scale)
-  {
-    Servo_SetVelocityGains((float)nv->vel_kp_raw * CFG_KP_VEL_LSB,
-                           (float)nv->vel_ki_raw * CFG_KI_VEL_LSB);
-    Servo_SetPositionGains((float)nv->pos_kp_raw * CFG_KP_POS_LSB,
-                           (float)nv->pos_ki_raw * CFG_KI_POS_LSB,
-                           (float)nv->pos_kd_raw * CFG_KD_POS_LSB);
-  }
+  Cali_ApplyUserGains(nv);
   if (Servo_GetFault()) { return 0U; }
   Servo_ResumeAfterFlash(SERVO_RUN);
   CtrlTimer_Start();

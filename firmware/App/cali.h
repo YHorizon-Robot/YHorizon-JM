@@ -8,6 +8,7 @@
 extern "C" {
 #endif
 
+void Cali_ApplyUserGains(const CaliNvData_t *nv);
 uint8_t Cali_Start(void);
 uint8_t Cali_ApplySaved(const CaliNvData_t *nv);
 

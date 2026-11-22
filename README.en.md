@@ -55,7 +55,7 @@ Integrated joint with a planetary gearbox. First-revision mechanics and electron
 | Bus | Classic CAN 2.0, 1 Mbps, Motor Protocol V1.0 |
 | Control | Firmware 1.6. Current inner loop by default; voltage inner loop optional. Motion / velocity / position modes, plus group sync for 1–16 axes |
 
-After power-on calibration or loading Flash parameters, the drive enters motion control. The current PI uses the WK4310H phase resistance and inductance in this repo. A purchased motor may not match those parameters. If the current loop will not run, set `CFG_INNER_LOOP` in `firmware/App/config.h` to `CFG_INNER_LOOP_VOLTAGE` and rebuild to switch back to the voltage inner loop. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
+JM1 loads its saved calibration and validated current PI on startup. A unit without a saved current tune uses the WK4310H board defaults. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
 
 Test video: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
 
@@ -198,6 +198,12 @@ Build with `.\tools\build.ps1 -Preset gd32f303-dm4310` or `./tools/build.sh --pr
 The image handles MIT motion, FC enable, FD disable, FB clear and directed read-only registers 7/8/9/10/21/22/23. For a stationary connection check, send `7FF#0100331500000000` and expect `011#0100331500004841` (PMAX = 12.5 rad). Start a zero-gain, zero-feedforward stream at 100 Hz before enabling. Enable and accepted motion commands have a 100 ms deadline; re-enable after a timeout. FE disarms without saving a zero or acknowledging success. Register writes are ignored.
 
 Position targets use absolute output-shaft radians relative to the JM1 zero. Feedback saturates at the wire limits of ±12.5 rad, ±30 rad/s and ±10 Nm. The bench cap is ±1 A on total Iq demand including cogging compensation. Torque feedback is estimated from measured Iq, D6 reports board temperature (0 if unavailable) and D7 is 0. Hardware timing and vendor-host interoperability still require bench validation.
+
+### Commission a unit before changing protocols
+
+On a new unit, use the native JM1 CAN image (`gd32f303`) and the Rust commissioning page. With the motor secured, unloaded and free to travel, calibrate the encoder and mechanical zero, identify phase R and d/q inductance, then auto-tune current, velocity and position loops. For low-speed tracking, measure cogging in both directions and validate it. Save and read back each result. A unit with valid per-motor records can go directly to its target image using the page-flash scripts. A full-chip erase removes the records.
+
+Both the native and third-party images load the same saved tune and cogging table. Saving new R/L invalidates the previous automatic tune and table. Saving a new PID tune requires another cogging sweep. Velocity, position and nonzero-gain impedance tracking use the saved table at low speed. Direct current and torque commands keep their wire semantics. RTT reports the stored generation and flags at boot. The stall torque diagnostic uses the saved phase resistance when available.
 
 ### Other CAN bench profiles
 
