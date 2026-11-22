@@ -10,7 +10,7 @@
 
 本固件默认 **20 kHz 电流内环**，电压内环仍可选择。4 kHz 的 Velocity／Position 外环仍输出归一化指令 `t_ref`。运控模式的 Kp、Kd 和力矩前馈按输出轴牛·米接收：`t_ref = T_Nm × V_limit / (Kt × I_limit × 减速比)`，固件再用 `t_ref` 算电流。前馈和反馈力矩都是 `int16 × 0.001 Nm`。速度、位置模式的增益单位不变。
 
-- 常规电流内环使用 `Iq_ref = closed_loop_dir × t_ref × I_limit / V_limit` 和 `Id_ref=0`。正式固件的配置上限为 20 A、0.45 pu，主机从设备读取实际比例。启用齿槽表时，支持的模式另加位置相关的电流前馈。内部电流指令按斜坡变化。
+- 常规电流内环使用 `Iq_ref = closed_loop_dir × t_ref × I_limit / V_limit` 和 `Id_ref=0`。正式固件的配置上限为 20 A、0.45 pu，主机从设备读取实际比例。启用齿槽表时，速度、位置和 Motion（含零增益纯力矩）另加位置相关的电流前馈。直接 Iq 跳过查表。内部电流指令按斜坡变化。
 - 电压内环：`Vq = closed_loop_dir × t_ref`；开环编码器校准始终使用电压。
 - 上电校准／加载成功后状态为 RUNNING，桥保持关闭，收到新实时命令才恢复。没有 ENABLE，也没有运控命令超时；非零指令发一次后会持续保持，直到新命令、DISABLE 或故障。
 - `SET_CONTROL_MODE`、`SET_INNER_LOOP`、写 Flash 都先关闭桥、清目标和积分；恢复需新实时命令、有效采样及中性占空比锁存。切换内环还把外环增益重置为对应默认值。电流内环速度 Kp/Ki 默认 0，须单独整定；直接电流入口不依赖速度／位置环。
@@ -30,10 +30,14 @@
 
 `SET_INNER_LOOP (0x0A)` 请求 ID=`0x200+ID`：Byte0=0x0A，Byte1=Sequence，Byte2=0 电压／1 电流，Byte3…7=0。仅 RUNNING 接受；成功在 `0x280+ID` 回标准 ACK，Byte6 回所选内环。选择仅保存在 RAM，重启使用编译默认。
 
-`GET_CURRENT_CONFIG (0x22)`：Byte0=0x22，Byte1=Sequence，Byte2=页码 0/1/2，余字节为 0。成功响应 ID=`0x440+ID`：Byte0=页码，Byte1=Sequence，Byte2…7 为三个 uint16。页 2：Byte2…3=`Kt × 1000`（Nm/A），Byte4…5=`减速比 × 100`。
+`GET_CURRENT_CONFIG (0x22)`：Byte0=0x22，Byte1=Sequence，Byte2=页码 0/1/2，余字节为 0。成功响应 ID=`0x440+ID`：Byte0=页码，Byte1=Sequence，Byte2…7 为三个 uint16。页 2：Byte2…3=`Kt × 1000`（Nm/A），Byte4…5=`减速比 × 100`，Byte6…7 为扩展能力字，bit0=支持独立 Iq 实时指令。旧固件此字为零。
 
 - 第 0 页 Byte2…3 为 `I_limit × 1000`（mA），Byte4…5 为 `V_limit × 10000`（pu），Byte6…7 为设计带宽（Hz）。固件 1.5 在 R/L 和电流 PI 整定标志均有效时由保存的 Ki 与 Rs 反算带宽，其余情况报告板卡默认值。
 - 第 1 页 Byte2…3 为当前 `Kp × 1000`（Kp 单位 V/A），Byte4…5 为当前 Ki（V/(A·s)），Byte6…7 为电流环执行频率（Hz）。
+
+**独立 Iq 指令**使用 `0x4C0 + ID`，Byte0…1 是有符号小端 int16，单位 mA，Byte2…7 全零。要求节点已校准、RUNNING、Motion 外环及电流内环。幅值超出设备电流上限或保留字节非零时丢弃。有效命令和 Motion 共用原有实时反馈 `0x300 + ID` 和停机逻辑，同一接收批次最后一条有效目标生效。以控制方向给定 Iq，闭环方向转换、斜坡和最终电流限幅继续生效。
+
+节点 1 的 `101#000000000000E803` 在 Kp=Kd=0 时请求输出轴 +1 Nm。有效齿槽表会在低速参与补偿。`4C1#E803000000000000` 请求直接 +1 A。`4C1#0000000000000000` 请求直接 0 A。主动下发 0 Nm 时仍可有补偿电流，关桥请发 DISABLE。旧上位机将 A 换成 Nm 后发 Motion，固件会按力矩处理，使用直接电流时须同时更新上位机。
 
 `GET_CURRENT_STATE (0x23)`：Byte0=0x23，Byte1=Sequence，余字节为 0。成功响应 ID=`0x400+ID`，四个 int16 依次为：Byte0…1=Id（mA），Byte2…3=Iq（mA），Byte4…5=Iq_ref（mA），Byte6…7=Vq（0.0001 pu）。无 ACK，也不回 Sequence；该帧只在收到本命令时发送，不随运动反馈上报。Id/Iq 是最近一次有效采样，异常时结合 GET_STATUS 故障位判断，不能把故障期间保持的数值当成新样本。
 

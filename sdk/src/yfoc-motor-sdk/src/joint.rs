@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use yfoc_can::{CanBus, Frame};
 use yfoc_protocol::{
-    current_scale, ids, pack_gains, pack_mgmt, pack_motion, unpack_ack, unpack_current_config,
+    current_scale, ids, pack_gains, pack_mgmt, pack_direct_iq, unpack_ack, unpack_current_config,
     unpack_current_state, unpack_device_info, unpack_feedback, unpack_status, CurrentConfig,
     DeviceInfo, Ids, Status, CMD_GET_CURRENT_CONFIG, CMD_GET_CURRENT_STATE, CMD_GET_DEVICE_INFO,
     CMD_GET_STATUS, CMD_SET_GAINS, CMD_SET_INNER_LOOP, CMD_SET_MODE, INNER_LOOP_CURRENT,
@@ -28,6 +28,7 @@ pub struct Joint<B: CanBus> {
     seq: u8,
     /// 已确认的电流协议能力。
     supports_current: bool,
+    config: Option<CurrentConfig>,
     /** @brief 已确认的位置警告能力（bit5）。未确认时不把 Byte7 bit4 当作多圈未建立。 */
     position_warn: bool,
     /** @brief 已确认焊了 NTC（能力 bit6）。未确认时温度字段按无效处理。 */
@@ -45,6 +46,7 @@ impl<B: CanBus> Joint<B> {
             ids: ids(node_id),
             seq: 0,
             supports_current: false,
+            config: None,
             position_warn: false,
             temp_sensor: false,
         })
@@ -58,6 +60,7 @@ impl<B: CanBus> Joint<B> {
     pub(crate) fn select_node(&mut self, node: u8) {
         self.ids = ids(node);
         self.supports_current = false;
+        self.config = None;
         self.temp_sensor = false;
         self.position_warn = false;
     }
@@ -168,6 +171,7 @@ impl<B: CanBus> Joint<B> {
     /// 查询能力。旧固件或超时返回 `None`，不报错。
     pub fn discover(&mut self) -> Result<Option<DeviceInfo>, String> {
         self.supports_current = false;
+        self.config = None;
         self.position_warn = false;
         self.temp_sensor = false;
         let seq = self.next_seq();
@@ -257,11 +261,12 @@ impl<B: CanBus> Joint<B> {
         Ok(())
     }
 
-    /// 读两页电流配置。
+    /// 读取三页电流配置并记录本节点的 Iq 能力。
     pub fn current_config(&mut self) -> Result<CurrentConfig, String> {
         if !self.supports_current {
             return Err("Firmware does not advertise the current-loop protocol".into());
         }
+        self.config = None;
         let mut config = CurrentConfig::default();
         for page in [0u8, 1, 2] {
             let data = self.mgmt(
@@ -273,6 +278,7 @@ impl<B: CanBus> Joint<B> {
             config.apply_page(&unpack_current_config(&data).map_err(|err| err)?);
         }
         current_scale(Some(&config))?;
+        self.config = Some(config.clone());
         Ok(config)
     }
 
@@ -337,9 +343,15 @@ impl<B: CanBus> Joint<B> {
         self.send(self.ids.mgmt, pack_mgmt(CMD_GET_CURRENT_STATE, seq, 0))
     }
 
+    /// 向已确认支持独立 Iq 的节点发送安培目标。须处于 Motion 外环和电流内环。
+    pub fn set_direct_iq(&mut self, amps: f64) -> Result<(), String> {
+        let data = pack_direct_iq(amps, self.config.as_ref())?;
+        self.send(self.ids.iq_cmd, data)
+    }
+
     /// 关闭前发出的零电流。
     pub fn send_zero_current(&mut self) -> Result<(), String> {
-        self.send(self.ids.motion, pack_motion(0.0, 0.0, 0.0))
+        self.set_direct_iq(0.0)
     }
 
     /// 解析反馈，供 CLI 打印。

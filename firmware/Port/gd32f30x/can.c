@@ -30,12 +30,13 @@ static void Can_ConfigFilters(uint8_t id)
 #elif CFG_CAN_COMPAT
   if (!ProfileNodeValid(id)) { return; }
 #else
-  static const uint16_t bases[5] = {
+  static const uint16_t bases[] = {
     CFG_CAN_MOTION_BASE,
     CFG_CAN_VEL_BASE,
     CFG_CAN_GAINS_BASE,
     CFG_CAN_POS_BASE,
-    CFG_CAN_MGMT_BASE
+    CFG_CAN_MGMT_BASE,
+    CFG_CAN_IQ_CMD_BASE
   };
 #endif
   can_filter_parameter_struct filter;
@@ -67,7 +68,7 @@ static void Can_ConfigFilters(uint8_t id)
     can_filter_init(&filter);
   }
 #else
-  for (uint32_t i = 0U; i < 5U; i++)
+  for (uint32_t i = 0U; i < sizeof(bases) / sizeof(bases[0]); i++)
   {
     const uint16_t sid = (uint16_t)(bases[i] + (uint16_t)id);
     filter.filter_number = (uint16_t)i;
@@ -75,10 +76,10 @@ static void Can_ConfigFilters(uint8_t id)
     can_filter_init(&filter);
   }
   /** @brief 节点号 0 的管理帧是广播，只接受 DISABLE。 */
-  filter.filter_number = 5U;
+  filter.filter_number = 6U;
   filter.filter_list_high = (uint16_t)(CFG_CAN_BROADCAST_ID << 5);
   can_filter_init(&filter);
-  filter.filter_number = 6U;
+  filter.filter_number = 7U;
   filter.filter_list_high = (uint16_t)(CFG_CAN_SYNC_ID << 5);
   can_filter_init(&filter);
 #endif

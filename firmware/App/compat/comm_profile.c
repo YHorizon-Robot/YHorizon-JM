@@ -112,16 +112,15 @@ static void Apply(ProfileAction action, const ProfileTarget *target)
   if (Servo_GetCtrlMode() != mode) { Servo_SetCtrlMode(mode); }
   if (action == CMD_VELOCITY) { Servo_SetVelocityCmd(target->velocity); }
   else if (action == CMD_POSITION) { Servo_SetPositionCmd(target->position, target->velocity); }
+  else if (action == CMD_CURRENT) { Servo_SetDirectIq(target->amps); }
   else
   {
-    float ff = action == CMD_CURRENT ? target->amps * (CFG_V_LIMIT / CFG_I_LIMIT_A)
-                                     : Cfg_NmToPu(target->torque);
     float position = target->position;
 #if CFG_RS05 || CFG_CYBERGEAR
     position += s_zero_offset;
 #endif
     Servo_SetGains(Cfg_NmToPu(target->kp), Cfg_NmToPu(target->kd));
-    Servo_SetMotion(position, target->velocity, ff);
+    Servo_SetMotion(position, target->velocity, Cfg_NmToPu(target->torque));
   }
   s_driving = 1;
 }

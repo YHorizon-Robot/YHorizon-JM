@@ -8,13 +8,13 @@ use std::time::Duration;
 
 use yfoc_can::{CanBus, Frame};
 use yfoc_protocol::{
-    current_command_to_nm, current_scale, fault_name, ids, is_realtime, mode_name, node_of,
+    pack_direct_iq, current_scale, fault_name, ids, is_realtime, mode_name, node_of,
     pack_gains, pack_mgmt, pack_motion, pack_position, pack_velocity, result_name, rx_kind,
     state_name, unpack_ack, unpack_cali, unpack_current_config, unpack_current_state,
     unpack_device_info, unpack_feedback, unpack_gains, unpack_status, warn_name, CurrentConfig,
     CurrentState, Gains, RxKind, CAN_BROADCAST, CMD_DISABLE, CMD_GET_CURRENT_CONFIG,
     CMD_GET_CURRENT_STATE, CMD_GET_DEVICE_INFO, CMD_GET_FEEDBACK, CMD_GET_GAINS, CMD_GET_STATUS,
-    CMD_SAVE_USER_PARAMS, CMD_SET_GAINS, CMD_SET_INNER_LOOP, CMD_SET_MODE, CMD_SET_NODE_ID,
+    CMD_SAVE_USER_PARAMS, CMD_SET_INNER_LOOP, CMD_SET_MODE, CMD_SET_NODE_ID,
     CMD_START_CALI, HOST_CURRENT_CAP_A, INNER_LOOP_CURRENT, MODE_MOTION, MODE_POSITION,
     MODE_VELOCITY, WARN_ABS_UNKNOWN, WARN_TEMP,
 };
@@ -208,7 +208,7 @@ struct SetupStep {
 
 enum SetupDone {
     None,
-    Current { amps: f64, ff: f64, cyclic: bool, rate: f64 },
+    Current { amps: f64, data: [u8; 8], cyclic: bool, rate: f64 },
     Drive { target: Target, cyclic: bool },
     Inner,
 }
@@ -947,24 +947,18 @@ impl BusSession {
         if !ready {
             return Err("请先确认电流内环并读取当前设备配置".into());
         }
-        let config = self.devices.get(&id).map(|dev| dev.config.clone());
-        let ff = current_command_to_nm(amps, config.as_ref())?;
+        let data = pack_direct_iq(amps, self.devices.get(&id).map(|dev| &dev.config))?;
         if cyclic {
             check_rate(rate)?;
         }
         self.stop_device(id, bus, now_us)?;
         let mode_seq = self.next_seq();
-        let gains_seq = self.next_seq();
         let dev = self.devices.get_mut(&id).expect("device");
         dev.setup.push_back(SetupStep {
             cmd: CMD_SET_MODE,
             frame: Frame { id: ids(id).mgmt, data: pack_mgmt(CMD_SET_MODE, mode_seq, MODE_MOTION) },
         });
-        dev.setup.push_back(SetupStep {
-            cmd: CMD_SET_GAINS,
-            frame: Frame { id: ids(id).gains, data: pack_gains(MODE_MOTION, gains_seq, 0.0, 0.0, 0.0) },
-        });
-        dev.setup_done = SetupDone::Current { amps, ff, cyclic, rate };
+        dev.setup_done = SetupDone::Current { amps, data, cyclic, rate };
         self.pump_setup(id, now_us);
         Ok(())
     }
@@ -1062,7 +1056,7 @@ impl BusSession {
     /**
      * @brief 原地替换循环帧内容和周期，不重排下一次发送时刻，也不重走 ACK 握手。
      *
-     * 电流目标仍按设备配置换算并限幅；换算失败时保留旧目标。
+     * 直接 Iq 按设备能力和电流上限校验，校验失败时保留旧目标。
      */
     fn retarget(&mut self, target: Target) -> Result<(), String> {
         let Some(id) = self.selected else { return Ok(()) };
@@ -1075,8 +1069,7 @@ impl BusSession {
         check_rate(rate)?;
         let (payload, text) = match target {
             Target::Current { amps, .. } => {
-                let nm = current_command_to_nm(amps, Some(&dev.config))?;
-                (pack_motion(0.0, 0.0, nm), format!("电流 {amps} A / {} Nm", fmt_g(nm)))
+                (pack_direct_iq(amps, Some(&dev.config))?, format!("Iq {amps} A"))
             }
             other => match other.frame(id) {
                 Some((_, payload, text)) => (payload, text),
@@ -1124,7 +1117,7 @@ impl BusSession {
         dev.direct_current = false;
         self.paced.retain(|frame| !(node_of(frame.id) == Some(id) && is_realtime(frame.id)));
         if direct {
-            let frame = Frame { id: ids(id).motion, data: pack_motion(0.0, 0.0, 0.0) };
+            let frame = Frame { id: ids(id).iq_cmd, data: [0; 8] };
             self.send_frame(bus, frame, now_us)?;
             self.log("TX 0 A（直接电流停止）");
         }
@@ -1667,21 +1660,20 @@ impl BusSession {
                 }
                 self.send_target(id, target, cyclic, now_us);
             }
-            Some(Ok(SetupDone::Current { amps, ff, cyclic, rate })) => {
+            Some(Ok(SetupDone::Current { amps, data, cyclic, rate })) => {
                 if let Some(dev) = self.devices.get_mut(&id) {
                     dev.mode = Some(MODE_MOTION);
                     dev.mode_name = mode_name(MODE_MOTION);
                 }
-                let data = pack_motion(0.0, 0.0, ff);
                 if cyclic {
-                    self.start_cyclic(id, CyclicKind::Current, now_us, ids(id).motion, data, rate);
+                    self.start_cyclic(id, CyclicKind::Current, now_us, ids(id).iq_cmd, data, rate);
                 } else {
-                    self.enqueue(id, Frame { id: ids(id).motion, data });
+                    self.enqueue(id, Frame { id: ids(id).iq_cmd, data });
                 }
                 if let Some(dev) = self.devices.get_mut(&id) {
                     dev.direct_current = amps != 0.0;
                 }
-                self.log(format!("TX 电流指令 {amps} A / {} Nm", fmt_g(ff)));
+                self.log(format!("TX Iq {amps} A"));
             }
             Some(Ok(SetupDone::Inner)) => {
                 self.input_reset = self.input_reset.wrapping_add(1);
@@ -1986,7 +1978,7 @@ mod tests {
     use yfoc_can::CanError;
     use yfoc_protocol::{
         CAP_CONTROL_EXT, CAP_POSITION_WARN, CMD_GET_CURRENT_CONFIG, CMD_GET_DEVICE_INFO,
-        CMD_SET_GAINS, CMD_SET_INNER_LOOP, CMD_SET_MODE, WARN_ABS_UNKNOWN, WARN_TEMP,
+        CMD_SET_INNER_LOOP, CMD_SET_MODE, WARN_ABS_UNKNOWN, WARN_TEMP,
     };
 
     struct Mock {
@@ -2059,7 +2051,7 @@ mod tests {
             let values = match page {
                 0 => (5000, 5000, 500),
                 1 => (7477, 16211, 20000),
-                _ => (230, 800, 0),
+                _ => (230, 800, 1),
             };
             bus.inbox.push_back(config_frame(1, page, seq, values.0, values.1, values.2));
         }
@@ -2067,7 +2059,7 @@ mod tests {
     }
 
     #[test]
-    fn current_needs_two_acks_and_bad_ack_cancels() {
+    fn direct_iq_waits_for_mode_ack_and_preserves_motion_gains() {
         let (mut session, mut bus) = fresh();
         negotiate(&mut session, &mut bus, 0);
         assert!(session.devices[&1].config.i_limit.is_some());
@@ -2082,13 +2074,10 @@ mod tests {
         assert!(bus.sent.iter().all(|f| f.id != ids(1).gains));
         bus.inbox.push_back(ack(1, CMD_SET_MODE, seq, 0));
         session.poll(12, &mut bus);
-        assert!(bus.sent.iter().any(|f| f.id == ids(1).gains));
-        let gain = bus.sent.iter().rev().find(|f| f.id == ids(1).gains).unwrap();
-        bus.inbox.push_back(ack(1, CMD_SET_GAINS, gain.data[1], 0));
-        session.poll(13, &mut bus);
-        let motion = bus.sent.iter().rev().find(|f| f.id == ids(1).motion).unwrap();
-        let nm = i16::from_le_bytes([motion.data[6], motion.data[7]]) as f64 * 0.001;
-        assert!((nm - 2.0 * 0.23 * 8.0).abs() < 0.001);
+        assert!(bus.sent.iter().all(|f| f.id != ids(1).gains));
+        let iq = bus.sent.iter().find(|f| f.id == ids(1).iq_cmd).unwrap();
+        assert_eq!(iq.data, [0xd0, 0x07, 0, 0, 0, 0, 0, 0]);
+        assert!(bus.sent.iter().all(|f| f.id != ids(1).motion));
 
         let (mut session, mut bus) = fresh();
         negotiate(&mut session, &mut bus, 0);
@@ -2098,7 +2087,20 @@ mod tests {
         let seq = bus.sent[0].data[1];
         bus.inbox.push_back(ack(1, CMD_SET_MODE, seq, 3));
         session.poll(21, &mut bus);
-        assert!(bus.sent.iter().all(|f| f.id != ids(1).motion));
+        assert!(bus.sent.iter().all(|f| !is_realtime(f.id)));
+    }
+
+    #[test]
+    fn missing_direct_iq_capability_blocks_current_before_setup() {
+        let (mut session, mut bus) = fresh();
+        negotiate(&mut session, &mut bus, 0);
+        for capability in [Some(false), None] {
+            session.devices.get_mut(&1).unwrap().config.direct_iq = capability;
+            bus.sent.clear();
+            assert!(session.command(cur(0.0, false), 10, &mut bus).is_err());
+            session.poll(10, &mut bus);
+            assert!(bus.sent.is_empty());
+        }
     }
 
     #[test]
@@ -2137,13 +2139,14 @@ mod tests {
         let mode_seq = bus.sent.iter().rev().find(|f| f.data[0] == CMD_SET_MODE).unwrap().data[1];
         bus.inbox.push_back(ack(1, CMD_SET_MODE, mode_seq, 0));
         session.poll(11, &mut bus);
-        let gain_seq = bus.sent.iter().rev().find(|f| f.id == ids(1).gains).unwrap().data[1];
-        bus.inbox.push_back(ack(1, CMD_SET_GAINS, gain_seq, 0));
         session.poll(12, &mut bus);
         assert!(session.devices[&1].direct_current);
+        session.command(Command::Retarget(Target::Current { amps: -0.125, rate: 200.0 }), 12, &mut bus).unwrap();
+        let cycle = session.devices[&1].cyclic.as_ref().unwrap();
+        assert_eq!((cycle.can_id, cycle.payload), (ids(1).iq_cmd, [0x83, 0xff, 0, 0, 0, 0, 0, 0]));
         bus.sent.clear();
         session.command(Command::Stop, 13, &mut bus).unwrap();
-        assert_eq!(bus.sent.last().unwrap().data, [0; 8]);
+        assert_eq!(bus.sent.last().unwrap(), &Frame { id: ids(1).iq_cmd, data: [0; 8] });
         assert!(!session.devices[&1].direct_current);
 
         session.command(Command::Select(2), 14, &mut bus).unwrap();
@@ -2158,14 +2161,12 @@ mod tests {
         let mode_seq = bus.sent.iter().rev().find(|f| f.id == ids(1).mgmt && f.data[0] == CMD_SET_MODE).unwrap().data[1];
         bus.inbox.push_back(ack(1, CMD_SET_MODE, mode_seq, 0));
         session.poll(17, &mut bus);
-        let gain_seq = bus.sent.iter().rev().find(|f| f.id == ids(1).gains).unwrap().data[1];
-        bus.inbox.push_back(ack(1, CMD_SET_GAINS, gain_seq, 0));
         session.poll(18, &mut bus);
         assert!(session.devices[&1].direct_current);
         assert!(session.devices[&2].cyclic.is_some());
         bus.sent.clear();
         session.disconnect(&mut bus, 19);
-        assert!(bus.sent.iter().any(|f| f.id == ids(1).motion && f.data == [0; 8]));
+        assert!(bus.sent.iter().any(|f| f.id == ids(1).iq_cmd && f.data == [0; 8]));
         assert!(bus.sent.iter().all(|f| f.id != ids(2).vel));
     }
 
@@ -2178,12 +2179,10 @@ mod tests {
         let mode_seq = bus.sent.iter().find(|f| f.data[0] == CMD_SET_MODE).unwrap().data[1];
         bus.inbox.push_back(ack(1, CMD_SET_MODE, mode_seq, 0));
         session.poll(11, &mut bus);
-        let gain_seq = bus.sent.iter().rev().find(|f| f.id == ids(1).gains).unwrap().data[1];
-        bus.inbox.push_back(ack(1, CMD_SET_GAINS, gain_seq, 0));
         session.poll(12, &mut bus);
         bus.sent.clear();
         session.command(Command::InnerLoop { mode: 0 }, 20, &mut bus).unwrap();
-        assert_eq!(bus.sent[0].data, [0; 8]);
+        assert_eq!(bus.sent[0], Frame { id: ids(1).iq_cmd, data: [0; 8] });
         session.poll(20, &mut bus);
         assert!(bus.sent.iter().any(|f| f.data[0] == CMD_SET_INNER_LOOP));
         assert!(session.devices[&1].cyclic.is_none());
@@ -2197,7 +2196,7 @@ mod tests {
         session.poll(10 + SETUP_TIMEOUT_US + 1, &mut bus);
         bus.inbox.push_back(ack(1, cmd, seq, 0));
         session.poll(10 + SETUP_TIMEOUT_US + 2, &mut bus);
-        assert!(bus.sent.iter().all(|f| f.id != ids(1).motion || f.data == [0; 8]));
+        assert!(bus.sent.iter().all(|f| !is_realtime(f.id) || f.data == [0; 8]));
     }
 
     #[test]

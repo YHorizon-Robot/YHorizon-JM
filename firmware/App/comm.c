@@ -1,4 +1,5 @@
 #include "comm.h"
+#include <stdlib.h>
 
 #include "adc.h"
 #include "cali_nv.h"
@@ -13,6 +14,7 @@
 #include "pwm.h"
 #include "servo.h"
 
+#define COMM_RT_DIRECT_IQ           (4U)
 #define COMM_MODE_MOTION            (0x00U)
 #define COMM_MODE_VELOCITY          (0x01U)
 #define COMM_MODE_POSITION          (0x02U)
@@ -378,6 +380,7 @@ static void Comm_SendCurrentConfig(uint8_t page, uint8_t seq)
   {
     Comm_WriteU16Le(&data[2], Comm_FloatToU16(CFG_MOTOR_KT_NM_A, 0.001f));
     Comm_WriteU16Le(&data[4], Comm_FloatToU16(CFG_GEAR_RATIO, 0.01f));
+    data[6] = BOARD_CURRENT_CONTROL_SUPPORTED ? 1U : 0U; /* Dedicated signed mA command. */
   }
   Comm_CacheSend(CFG_CAN_CURRENT_CONFIG_BASE + Comm_Nid(), COMM_CMD_GET_CURRENT_CONFIG, seq, data);
 }
@@ -813,6 +816,7 @@ void Comm_Process(void)
 {
   CanFrame_t frame;
   uint8_t have_rt = 0U;
+  float iq_amps = 0.0f;
   float p_set = 0.0f;
   float v_set = 0.0f;
   float t_ff = 0.0f;
@@ -870,6 +874,16 @@ void Comm_Process(void)
         v_set = v;
         t_ff = ff;
         have_rt = COMM_MODE_MOTION + 1U;
+      }
+    }
+    else if (frame.id == (CFG_CAN_IQ_CMD_BASE + nid))
+    {
+      const int16_t ma = (int16_t)Comm_ReadU16Le(frame.data);
+      if (s_ctrl_mode == COMM_MODE_MOTION && Servo_GetInnerLoop() == CFG_INNER_LOOP_CURRENT &&
+          Comm_ReservedZero(frame.data, 2U) && abs((int)ma) <= (int)(CFG_I_LIMIT_A * 1000.0f))
+      {
+        iq_amps = (float)ma * 0.001f;
+        have_rt = COMM_RT_DIRECT_IQ;
       }
     }
     else if (frame.id == (CFG_CAN_VEL_BASE + nid))
@@ -943,6 +957,10 @@ void Comm_Process(void)
   if (have_rt == (COMM_MODE_MOTION + 1U))
   {
     Servo_SetMotion(p_set, v_set, t_ff);
+  }
+  else if (have_rt == COMM_RT_DIRECT_IQ)
+  {
+    Servo_SetDirectIq(iq_amps);
   }
   else if (have_rt == (COMM_MODE_VELOCITY + 1U))
   {

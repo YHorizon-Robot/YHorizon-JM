@@ -8,10 +8,10 @@ use std::time::{Duration, Instant};
 use clap::Parser;
 use yfoc_can::{default_backend, default_channel, detect_channels, list_channels, open, CanBus};
 use yfoc_protocol::{
-    current_command_to_nm, current_scale, pack_motion, unpack_ack, INNER_LOOP_CURRENT,
+    current_scale, pack_direct_iq, pack_motion, unpack_ack, INNER_LOOP_CURRENT,
 };
 
-use yfoc_motor_sdk::Joint;
+use yfoc_motor_sdk::{ControlMode, Joint};
 use crate::commission::{self, Action, Step};
 use yfoc_motor_sdk::multi_axis::{self, Axis, Event, Plan};
 use crate::session::BusSession;
@@ -59,8 +59,8 @@ pub struct Args {
     /// 切换内环：voltage 或 current。
     #[arg(long)]
     pub inner_loop: Option<String>,
-    /// 直接电流，A。不会偷偷切换内环。
-    #[arg(long)]
+    /// 直接 Iq（A），要求独立 Iq 能力和电流内环。
+    #[arg(long, conflicts_with_all = ["pos", "vel", "kp", "kd", "ff"])]
     pub current: Option<f64>,
     /// 读电流实测后退出。
     #[arg(long)]
@@ -306,16 +306,18 @@ fn run_bus(args: Args, bus: Box<dyn CanBus>) -> Result<i32, String> {
         let config = if client.supports_current() { Some(client.current_config()?) } else { None };
         if let Some(config) = &config {
             println!(
-                "current limits ±{}A / ±{}pu; scale={}A/pu; BW={}Hz; Kp={}V/A Ki={}V/(A*s) loop={}Hz",
+                "current limits ±{}A / ±{}pu; scale={}A/pu; BW={}Hz; Kp={}V/A Ki={}V/(A*s) loop={}Hz direct_iq={}",
                 fmt_num(config.i_limit.unwrap_or(0.0)),
                 fmt_num(config.v_limit.unwrap_or(0.0)),
                 fmt_num(current_scale(Some(config)).unwrap_or(0.0)),
                 config.bandwidth_hz.unwrap_or(0),
                 fmt_num(config.kp.unwrap_or(0.0)),
                 fmt_num(config.ki.unwrap_or(0.0)),
-                config.loop_hz.unwrap_or(0)
+                config.loop_hz.unwrap_or(0),
+                config.direct_iq == Some(true)
             );
         }
+        let iq_payload = args.current.map(|amps| pack_direct_iq(amps, config.as_ref())).transpose()?;
         if let Some(inner) = &args.inner_loop {
             let current = match inner.as_str() {
                 "current" => true,
@@ -346,16 +348,15 @@ fn run_bus(args: Args, bus: Box<dyn CanBus>) -> Result<i32, String> {
         if !(args.rate > 0.0 && args.rate <= 2000.0) {
             return Err("--rate must be in (0, 2000] Hz".into());
         }
-        let motion = if let Some(amps) = args.current {
+        let (command_id, payload) = if let Some(data) = iq_payload {
             if status.inner_loop != Some(INNER_LOOP_CURRENT) {
                 return Err("--current requires confirmed CURRENT mode; use --inner-loop current".into());
             }
-            let nm = current_command_to_nm(amps, config.as_ref())?;
-            client.motion_setup(0.0, 0.0)?;
-            pack_motion(0.0, 0.0, nm)
+            client.set_mode(ControlMode::Motion)?;
+            (client.ids().iq_cmd, data)
         } else {
             client.motion_setup(args.kp.unwrap_or(0.0), args.kd.unwrap_or(0.0))?;
-            pack_motion(args.pos.unwrap_or(0.0), args.vel.unwrap_or(0.0), args.ff.unwrap_or(0.0))
+            (client.ids().motion, pack_motion(args.pos.unwrap_or(0.0), args.vel.unwrap_or(0.0), args.ff.unwrap_or(0.0)))
         };
         let stop = Arc::new(AtomicBool::new(false));
         let flag = Arc::clone(&stop);
@@ -374,7 +375,7 @@ fn run_bus(args: Args, bus: Box<dyn CanBus>) -> Result<i32, String> {
             let now = Instant::now();
             let due = !sent_once || (!args.once && now >= next_tx);
             if due {
-                client.send(client.ids().motion, motion)?;
+                client.send(command_id, payload)?;
                 sent_once = true;
                 current_started = args.current.is_some();
                 next_tx = now + period;

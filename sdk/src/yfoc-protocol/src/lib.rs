@@ -74,6 +74,8 @@ pub const CMD_GET_CURRENT_STATE: u8 = 0x23;
 
 /// Motion 命令基址。
 pub const CAN_MOTION: u32 = 0x100;
+/// Direct Iq 命令基址，D0..1 为有符号小端 mA。
+pub const CAN_IQ_CMD: u32 = 0x4C0;
 /// 速度命令基址。
 pub const CAN_VEL: u32 = 0x140;
 /// 增益命令与应答基址。
@@ -145,6 +147,8 @@ const FAULT_BITS: &[(u8, &str)] = &[
 pub struct Ids {
     /// Motion `0x100 + id`。
     pub motion: u32,
+    /// Direct Iq `0x4C0 + id`。
+    pub iq_cmd: u32,
     /// Velocity `0x140 + id`。
     pub vel: u32,
     /// Gains `0x180 + id`。
@@ -172,6 +176,7 @@ pub fn ids(node_id: u8) -> Ids {
     let nid = node_id.clamp(1, 63) as u32;
     Ids {
         motion: CAN_MOTION + nid,
+        iq_cmd: CAN_IQ_CMD + nid,
         vel: CAN_VEL + nid,
         gains: CAN_GAINS + nid,
         pos: CAN_POS + nid,
@@ -198,10 +203,10 @@ pub fn node_of(arbitration_id: u32) -> Option<u8> {
     }
 }
 
-/// 主机发出的实时控制帧（Motion / Velocity / Position）。
+/// 主机发出的实时控制帧（Motion / Velocity / Position / Direct Iq）。
 pub fn is_realtime(arbitration_id: u32) -> bool {
     let base = arbitration_id & !0x3F;
-    matches!(base, CAN_MOTION | CAN_VEL | CAN_POS)
+    matches!(base, CAN_MOTION | CAN_VEL | CAN_POS | CAN_IQ_CMD)
 }
 
 /// 电机上行帧种类。
@@ -688,6 +693,8 @@ pub struct CurrentConfigPage {
     pub kt: Option<f64>,
     /// 减速比。仅页 2。
     pub gear: Option<f64>,
+    /// 页 2 D6 bit0，支持独立的 Iq 指令。
+    pub direct_iq: Option<bool>,
 }
 
 /// 解析电流配置页。未知页返回错误。
@@ -709,6 +716,7 @@ pub fn unpack_current_config(data: &[u8; 8]) -> Result<CurrentConfigPage, String
             loop_hz: None,
             kt: None,
             gear: None,
+            direct_iq: None,
         }),
         1 => Ok(CurrentConfigPage {
             page,
@@ -721,6 +729,7 @@ pub fn unpack_current_config(data: &[u8; 8]) -> Result<CurrentConfigPage, String
             loop_hz: Some(c),
             kt: None,
             gear: None,
+            direct_iq: None,
         }),
         2 => Ok(CurrentConfigPage {
             page,
@@ -733,6 +742,7 @@ pub fn unpack_current_config(data: &[u8; 8]) -> Result<CurrentConfigPage, String
             loop_hz: None,
             kt: Some(a as f64 * 0.001),
             gear: Some(b as f64 * 0.01),
+            direct_iq: Some(c & 1 != 0),
         }),
         other => Err(format!("Unknown current configuration page {other}")),
     }
@@ -784,6 +794,8 @@ pub struct CurrentConfig {
     pub kt: Option<f64>,
     /// 减速比。
     pub gear: Option<f64>,
+    /// 页 2 D6 bit0，支持独立的 Iq 指令。
+    pub direct_iq: Option<bool>,
 }
 
 impl CurrentConfig {
@@ -810,6 +822,9 @@ impl CurrentConfig {
         if let Some(v) = page.kt {
             self.kt = Some(v);
         }
+        if page.direct_iq.is_some() {
+            self.direct_iq = page.direct_iq;
+        }
         if let Some(v) = page.gear {
             self.gear = Some(v);
         }
@@ -833,7 +848,18 @@ pub fn current_scale(config: Option<&CurrentConfig>) -> Result<f64, String> {
     Ok(limit / voltage_limit)
 }
 
-/// 把安培指令换成输出轴牛·米。电流限幅与 `current_command_to_pu` 相同，再乘转矩常数和减速比。
+/// 编码直接 Iq，零电流也使用本帧。只有固件明确支持时才能发送。
+pub fn pack_direct_iq(amps: f64, config: Option<&CurrentConfig>) -> Result<[u8; 8], String> {
+    if config.and_then(|cfg| cfg.direct_iq) != Some(true) {
+        return Err("设备未声明独立 Iq 指令能力，请读取配置或升级固件".into());
+    }
+    validate_current_amps(amps, config)?;
+    let mut data = [0; 8];
+    data[..2].copy_from_slice(&((amps * 1000.0).round() as i16).to_le_bytes());
+    Ok(data)
+}
+
+/// 根据电机参数估算等效输出轴力矩。发送直接 Iq 使用 `pack_direct_iq`。电流限幅与 `current_command_to_pu` 相同，再乘转矩常数和减速比。
 pub fn current_command_to_nm(amperes: f64, config: Option<&CurrentConfig>) -> Result<f64, String> {
     let _pu = current_command_to_pu(amperes, config)?;
     let config = config.ok_or("尚未读取设备电流配置")?;
@@ -848,14 +874,20 @@ pub fn current_command_to_nm(amperes: f64, config: Option<&CurrentConfig>) -> Re
 /// 把安培指令换成 Motion 前馈 pu。允许范围是设备限幅与 `HOST_CURRENT_CAP_A` 的较小值。
 pub fn current_command_to_pu(amperes: f64, config: Option<&CurrentConfig>) -> Result<f64, String> {
     let scale = current_scale(config)?;
-    let limit = config
-        .and_then(|c| c.i_limit)
-        .unwrap_or(0.0)
-        .min(HOST_CURRENT_CAP_A);
+    validate_current_amps(amperes, config)?;
+    Ok(amperes / scale)
+}
+
+fn validate_current_amps(amperes: f64, config: Option<&CurrentConfig>) -> Result<(), String> {
+    let rated = config.and_then(|c| c.i_limit).ok_or("尚未读取设备电流上限")?;
+    if !rated.is_finite() || rated <= 0.0 {
+        return Err("设备返回的电流上限无效".into());
+    }
+    let limit = rated.min(HOST_CURRENT_CAP_A);
     if !amperes.is_finite() || amperes.abs() > limit {
         return Err(format!("电流指令须在 ±{limit} A 内"));
     }
-    Ok(amperes / scale)
+    Ok(())
 }
 
 /// 校准上报。
@@ -950,6 +982,25 @@ mod tests {
         let data = pack_motion(0.0, 0.0, current_command_to_nm(-1.0, Some(&config)).unwrap());
         let ff = i16::from_le_bytes([data[6], data[7]]) as f64 * TORQUE_LSB;
         assert!((ff + 0.2).abs() < TORQUE_LSB);
+    }
+
+    #[test]
+    fn direct_iq_uses_signed_milliamps_and_advertised_capability() {
+        let mut config = CurrentConfig::default();
+        config.apply_page(&unpack_current_config(&pack_config(0, 1, 2000, 4500, 500)).unwrap());
+        assert!(pack_direct_iq(0.0, Some(&config)).is_err());
+        for flags in [0, 2, 1] {
+            config.apply_page(&unpack_current_config(&pack_config(2, 2, 0, 0, flags)).unwrap());
+            assert_eq!(pack_direct_iq(0.0, Some(&config)).is_ok(), flags == 1);
+        }
+        assert_eq!(pack_direct_iq(-0.125, Some(&config)).unwrap(), [0x83, 0xff, 0, 0, 0, 0, 0, 0]);
+        assert_eq!(pack_direct_iq(0.0, Some(&config)).unwrap(), [0; 8]);
+        assert_eq!(&pack_direct_iq(2.0, Some(&config)).unwrap()[..2], &2000i16.to_le_bytes());
+        for amps in [2.001, -2.001, f64::NAN, f64::INFINITY] {
+            assert!(pack_direct_iq(amps, Some(&config)).is_err());
+        }
+        assert_eq!(ids(63).iq_cmd, 0x4ff);
+        assert!(is_realtime(ids(1).iq_cmd));
     }
 
     #[test]

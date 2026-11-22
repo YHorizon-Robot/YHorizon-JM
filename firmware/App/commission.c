@@ -460,7 +460,7 @@ static uint8_t Arm(void)
     else
     {
       /* A zero target establishes current samples before the test step. */
-      Servo_SetMotion(0.0f, 0.0f, 0.0f);
+      Servo_SetDirectIq(0.0f);
     }
   }
   return 0U;

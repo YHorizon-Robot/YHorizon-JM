@@ -83,6 +83,7 @@ void Servo_SetOpenloop(float d_v, float q_v, float elec_rate_rad_s, float elec_a
 void Servo_SetOpenloopRate(float elec_rate_rad_s);
 float Servo_GetOpenloopElec(void);
 void Servo_SetVoltageCmd(float d_v, float q_v);
+void Servo_SetDirectIq(float amps);
 void Servo_SetMotion(float p_set, float v_set, float t_ff);
 void Servo_SetVelocityCmd(float v_set);
 void Servo_SetPositionCmd(float p_set, float v_max);

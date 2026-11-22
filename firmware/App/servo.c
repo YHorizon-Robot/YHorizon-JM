@@ -22,6 +22,7 @@ static Foc_Current_t s_cur;
 static volatile ServoMode_t s_mode = SERVO_IDLE;
 static volatile uint8_t s_ctrl_mode = SERVO_CTRL_MOTION;
 static volatile uint8_t s_inner_loop = CFG_INNER_LOOP;
+static volatile uint8_t s_direct_iq;
 static volatile uint8_t s_cmd_valid = 0U;
 
 static volatile float s_p_set;
@@ -112,6 +113,7 @@ static void Servo_ClearLoopState(void)
   s_pos_i = 0.0f;
   s_t_ref = 0.0f;
   s_cmd_valid = 0U;
+  s_direct_iq = 0U;
   s_iq_ref = 0.0f;
 }
 
@@ -334,6 +336,7 @@ void Servo_Init(void)
   s_vel_i = 0.0f;
   s_pos_i = 0.0f;
   s_cmd_valid = 0U;
+  s_direct_iq = 0U;
   s_d_out = 0.0f;
   s_q_out = 0.0f;
   s_ia = 0.0f;
@@ -499,10 +502,7 @@ static inline void Servo_RunCurrent(float elec, float signed_ref, uint8_t early)
 {
   const float limit = CFG_DRIVE_I_LIMIT_A;
 #if (CFG_COMMISSION != 0U)
-  /* A zero-gain motion packet is a direct Iq/torque request, including
-   * DJI group current. Apply the learned disturbance only to tracking. */
-  const uint8_t tracking = s_ctrl_mode != SERVO_CTRL_MOTION || s_kp != 0.0f || s_kd != 0.0f;
-  const float compensation = s_cmd_valid && tracking ? Commission_Cogging(s_enc1_raw) : 0.0f;
+  const float compensation = s_cmd_valid && !s_direct_iq ? Commission_Cogging(s_enc1_raw) : 0.0f;
   const float target = Foc_Clamp(Commission_LimitIq(
       signed_ref * (CFG_I_LIMIT_A / CFG_V_LIMIT) + compensation,
       s_closed_loop_dir), -limit, limit);
@@ -620,6 +620,12 @@ void Servo_OnPwmIsr(void)
   }
 }
 
+static float Servo_MotionReference(float position, float velocity)
+{
+  const float ref = s_kd * (s_v_set - velocity) + s_kp * (s_p_set - position) + s_t_ff;
+  return Foc_Clamp(ref, -CFG_V_LIMIT, CFG_V_LIMIT);
+}
+
 void Servo_OnCtrlIsr(void)
 {
   float p_act;
@@ -654,13 +660,13 @@ void Servo_OnCtrlIsr(void)
     return;
   }
 
+  if (s_direct_iq) { return; }
   p_act = Servo_MotorToOut(Foc_EncoderGetPosition(&s_enc));
   v_act = Servo_MotorToOut(Foc_EncoderGetVelocity(&s_enc));
 
   if (s_ctrl_mode == SERVO_CTRL_MOTION)
   {
-    const float t_ref = (s_kd * (s_v_set - v_act)) + (s_kp * (s_p_set - p_act)) + s_t_ff;
-    s_t_ref = Foc_Clamp(t_ref, -vlim, vlim);
+    s_t_ref = Servo_MotionReference(p_act, v_act);
   }
   else if (s_ctrl_mode == SERVO_CTRL_VELOCITY)
   {
@@ -787,6 +793,19 @@ void Servo_SetVoltageCmd(float d_v, float q_v)
   Board_IrqUnlock(primask);
 }
 
+void Servo_SetDirectIq(float amps)
+{
+  const uint32_t lock = Board_IrqLock();
+  if (s_mode == SERVO_RUN && s_fault == 0U && s_ctrl_mode == SERVO_CTRL_MOTION &&
+      s_inner_loop == CFG_INNER_LOOP_CURRENT && isfinite(amps))
+  {
+    s_t_ref = Foc_Clamp(amps * (CFG_V_LIMIT / CFG_I_LIMIT_A), -CFG_V_LIMIT, CFG_V_LIMIT);
+    s_direct_iq = 1U;
+    s_cmd_valid = 1U;
+  }
+  Board_IrqUnlock(lock);
+}
+
 void Servo_SetMotion(float p_set, float v_set, float t_ff)
 {
   const uint32_t primask = Board_IrqLock();
@@ -794,6 +813,13 @@ void Servo_SetMotion(float p_set, float v_set, float t_ff)
   s_p_set = p_set;
   s_v_set = Foc_Clamp(v_set, CFG_VEL_CMD_MIN, CFG_VEL_CMD_MAX);
   s_t_ff = Foc_Clamp(t_ff, -1.0f, 1.0f);
+  if (s_direct_iq)
+  {
+    /* Publish the new torque and its compensation policy together. */
+    s_t_ref = Servo_MotionReference(Servo_MotorToOut(Foc_EncoderGetPosition(&s_enc)),
+                                    Servo_MotorToOut(Foc_EncoderGetVelocity(&s_enc)));
+    s_direct_iq = 0U;
+  }
   s_cmd_valid = 1U;
   Board_IrqUnlock(primask);
 }
@@ -1251,6 +1277,7 @@ void Servo_HoldPosition(void)
   s_p_set = Servo_MotorToOut(Foc_EncoderGetPosition(&s_enc));
   s_v_set = 0.0f;
   s_v_max = CFG_POS_VMAX_DEFAULT;
+  s_direct_iq = 0U;
   s_t_ff = 0.0f;
   s_t_ref = 0.0f;
   s_vel_i = 0.0f;

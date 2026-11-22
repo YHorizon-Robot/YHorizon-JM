@@ -11,6 +11,7 @@
 #include "cali.h"
 #include "can.h"
 #include "commission.h"
+#include "comm.h"
 #include "config.h"
 #include "debug.h"
 #include "encoder.h"
@@ -22,6 +23,25 @@
 enum { PAGE = 2048, WORDS = 144, TABLE = 16 };
 static uint8_t flash[3 * PAGE], reply[8], bridge, fail_write;
 static uint32_t tick, writes;
+
+#if !CFG_CAN_COMPAT
+static CanFrame_t rx[3];
+static unsigned rx_count, rx_tail;
+static uint32_t reply_id;
+uint8_t Node_GetId(void) { return 1U; }
+uint8_t Node_ApplyAndReset(uint8_t id) { (void)id; return 0U; }
+uint8_t Can_PopRx(CanFrame_t *frame)
+{
+  if (rx_tail == rx_count) { rx_tail = rx_count = 0; return 0; }
+  *frame = rx[rx_tail++];
+  return 1;
+}
+static void Queue(CanFrame_t frame)
+{
+  assert(rx_count < sizeof(rx) / sizeof(rx[0]));
+  rx[rx_count++] = frame;
+}
+#endif
 
 uint32_t Board_GetTickMs(void) { return tick; }
 void Board_DelayMs(uint32_t ms) { tick += ms; }
@@ -53,11 +73,16 @@ void Can_StopForFlash(void) {}
 void Can_Restart(void) {}
 uint8_t Can_Send(uint32_t id, const uint8_t d[8])
 {
+#if CFG_CAN_COMPAT
   assert(id == CFG_CAN_COMMISSION_BASE+1);
+#else
+  reply_id = id;
+#endif
   memcpy(reply,d,8); return 1;
 }
 void Adc_RefreshVbus(void) {}
 float Adc_GetVbusVolts(void) { return 24; }
+uint8_t Adc_TempSensorPresent(void) { return 0; }
 uint8_t Adc_GetTempRaw(uint16_t *out) { (void)out; return 0; }
 uint8_t Adc_CurrentSenseReady(void) { return 1; }
 uint8_t Adc_ReadPhaseCurrents(float *a,float *b) { *a = *b = 0; return 1; }
@@ -124,6 +149,37 @@ static float RunAtRest(void)
   assert(!Servo_GetFault());
   return t.iq_ref;
 }
+#if !CFG_CAN_COMPAT
+static void CheckNativeWire(void)
+{
+  CanFrame_t torque = {.id=CFG_CAN_MOTION_BASE+1, .data={0,0,0,0,0,0,0xe8,0x03}};
+  CanFrame_t iq = {.id=CFG_CAN_IQ_CMD_BASE+1, .data={0x0c,0xfe}}; /* -500 mA */
+  CanFrame_t disable = {.id=CFG_CAN_MGMT_BASE+1, .data={2,10}};
+  CanFrame_t config = {.id=CFG_CAN_MGMT_BASE+1, .data={0x22,11,2}};
+  Comm_Init(1);
+  Queue(config); Comm_Process();
+  assert(reply_id == CFG_CAN_CURRENT_CONFIG_BASE+1 && reply[0] == 2 && reply[6] == 1 && reply[7] == 0);
+  Queue(iq); Queue(torque); Comm_Process();
+  Near(RunAtRest(),1.0f/(CFG_MOTOR_KT_NM_A*CFG_GEAR_RATIO)+0.2f);
+  Queue(torque); Queue(iq); Comm_Process(); Near(RunAtRest(),-0.5f);
+  iq.data[0]=iq.data[1]=0; iq.data[7]=1;
+  Queue(iq); Comm_Process(); Near(RunAtRest(),-0.5f);
+  iq.data[7]=0; iq.data[1]=0x7f;
+  Queue(iq); Comm_Process(); Near(RunAtRest(),-0.5f);
+  iq.data[1]=0;
+  Queue(iq); Comm_Process(); Near(RunAtRest(),0); assert(bridge);
+  Queue(torque); Queue(disable); Comm_Process(); Near(RunAtRest(),0); assert(!bridge);
+  CanFrame_t mode = {.id=CFG_CAN_MGMT_BASE+1, .data={6,12,SERVO_CTRL_POSITION}};
+  Queue(mode); Queue(iq); Comm_Process(); Near(RunAtRest(),0); assert(!bridge);
+  mode.data[1]++; mode.data[2]=SERVO_CTRL_MOTION;
+  Queue(mode); Comm_Process();
+  Servo_SetInnerLoop(CFG_INNER_LOOP_VOLTAGE);
+  Queue(iq); Comm_Process(); Near(RunAtRest(),0); assert(!bridge);
+  Servo_SetInnerLoop(CFG_INNER_LOOP_CURRENT);
+  Commission_ApplyControl();
+}
+#endif
+
 static void CheckTuned(void)
 {
   float p,i,d;
@@ -157,26 +213,43 @@ int main(void)
   words[8]=Bits(0.02f); words[9]=Bits(0.2f);
   words[10]=Bits(1); words[11]=Bits(0.1f); words[12]=Bits(0.01f);
   words[TABLE]=(300U<<16)|200U;
+  words[TABLE+1]=(uint16_t)(int16_t)-100;
   StageAndSave(words,1);
   CheckTuned();
   assert(Boot() && !bridge && writes==1);
   CheckTuned();
   Near(RunAtRest(),0); assert(!bridge);
-  Servo_SetGains(0,0); Servo_SetMotion(0,0,0); Near(RunAtRest(),0);
+#if !CFG_CAN_COMPAT
+  CheckNativeWire();
+#endif
+  Servo_SetGains(0,0); Servo_SetMotion(0,0,0); Near(RunAtRest(),0.2f);
+  const float one_nm_amps = 1.0f / (CFG_MOTOR_KT_NM_A * CFG_GEAR_RATIO);
+  Servo_SetMotion(0,0,Cfg_NmToPu(1)); Near(RunAtRest(),one_nm_amps+0.2f);
+  Servo_SetClosedLoopDir(-1); Near(RunAtRest(),-one_nm_amps+0.2f);
+  Servo_SetDirectIq(0.5f); Near(RunAtRest(),-0.5f);
+  Servo_SetClosedLoopDir(1);
+  Servo_SetDirectIq(0); Near(RunAtRest(),0);
+  Servo_SetGains(0.1f,0.1f);
+  Servo_SetMotion(4,0,0); Servo_SetDirectIq(-0.5f); Near(RunAtRest(),-0.5f);
+  Servo_SetMotion(0,0,0);
   Servo_SetGains(0.1f,0); Near(RunAtRest(),0.2f);
   Servo_SetGains(0,0.1f); Near(RunAtRest(),0.2f);
-  Servo_SetGains(0,0); Near(RunAtRest(),0);
+  Servo_SetGains(0,0); Near(RunAtRest(),0.2f);
   Servo_SetCtrlMode(SERVO_CTRL_VELOCITY); Servo_SetVelocityCmd(0); Near(RunAtRest(),0.2f);
   Servo_SetCtrlMode(SERVO_CTRL_POSITION); Servo_SetPositionCmd(0,1); Near(RunAtRest(),0.2f);
+  Near(Commission_Cogging(128),-0.10f);
   Near(Commission_Cogging(32),0.25f); /* half way between adjacent raw-angle bins */
 #if CFG_CAN_COMPAT
-  Servo_SetCtrlMode(SERVO_CTRL_MOTION); Servo_SetGains(1,0); Servo_SetMotion(0,0,1);
+  Servo_SetCtrlMode(SERVO_CTRL_MOTION); Servo_SetGains(0,0);
+  Servo_SetMotion(0,0,Cfg_NmToPu(0.9f * CFG_MOTOR_KT_NM_A * CFG_GEAR_RATIO));
   Near(RunAtRest(),CFG_DRIVE_I_LIMIT_A);
+  Servo_SetDirectIq(-10.0f); Near(RunAtRest(),-CFG_DRIVE_I_LIMIT_A);
 #endif
   words[0]=1|8|16; words[1]=Bits(4); /* host saves a new R/L measurement */
   fail_write=1; StageAndSave(words,0); CheckTuned();
   fail_write=0; StageAndSave(words,1); CheckInvalidated();
   assert(Boot() && !bridge && writes==2); CheckInvalidated();
+  Servo_SetGains(0,0); Servo_SetMotion(0,0,Cfg_NmToPu(1)); Near(RunAtRest(),one_nm_amps);
   flash[0]^=1; /* invalidate newest A/B slot; reload previous verified tune */
   assert(Boot() && !bridge && writes==2); CheckTuned();
   return 0;

@@ -544,7 +544,7 @@ impl HostApp {
                     CyclicKind::Motion => {
                         changed |= value(ui, "位置", &mut d.motion_pos, " rad", 0.01, -1e4..=1e4);
                         changed |= value(ui, "速度", &mut d.motion_vel, " rad/s", 0.05, -1e4..=1e4);
-                        changed |= value(ui, "前馈", &mut d.motion_ff, " Nm", 0.01, -32.767..=32.767);
+                        changed |= value(ui, "输出轴力矩前馈", &mut d.motion_ff, " Nm", 0.01, -32.767..=32.767);
                     }
                     CyclicKind::Velocity => {
                         changed |= value(ui, "目标速度", &mut d.vel, " rad/s", 0.05, -1e4..=1e4);
@@ -554,7 +554,7 @@ impl HostApp {
                         changed |= value(ui, "最大速度", &mut d.pos_max, " rad/s", 0.1, 0.0..=1e4);
                     }
                     CyclicKind::Current => {
-                        changed |= value(ui, "电流指令", &mut d.amps, " A", 0.01, -100.0..=100.0);
+                        changed |= value(ui, "直接 Iq", &mut d.amps, " A", 0.01, -100.0..=100.0);
                     }
                 }
                 changed |= value(ui, "循环频率", &mut d.rate, " Hz", 1.0, 1.0..=2000.0);
@@ -1196,8 +1196,10 @@ fn drive_block(dev: &DeviceSnap, kind: CyclicKind) -> Option<String> {
         Some("该固件不支持直接电流。".into())
     } else if dev.inner != Some(cmds::INNER_LOOP_CURRENT) {
         Some("内环不是电流环，请先在右侧「电流环」页切换。".into())
-    } else if !dev.config.has_scale() {
+    } else if !dev.config.has_scale() || dev.config.direct_iq.is_none() {
         Some("电流配置未读到，请在「电流环」页点刷新配置。".into())
+    } else if dev.config.direct_iq == Some(false) {
+        Some("该固件未声明独立 Iq 指令能力，升级固件后可使用直接电流。".into())
     } else {
         None
     }
@@ -1210,12 +1212,14 @@ fn drive_hint(dev: &DeviceSnap, kind: CyclicKind) -> String {
         CyclicKind::Motion | CyclicKind::Current => cmds::MODE_MOTION,
     };
     let mode = match dev.mode {
+        Some(_) if kind == CyclicKind::Current => "发送前确认 Motion 外环并等待 ACK。".to_string(),
         Some(mode) if mode == want => "外环已匹配，直接发送。".to_string(),
         Some(_) => format!("当前外环 {}，发送前会自动切换并等待 ACK。", dev.mode_name),
         None => "外环未知，发送前会先设置外环并等待 ACK。".to_string(),
     };
     let extra = match kind {
-        CyclicKind::Current => " 直接电流会先清零 Motion 增益；停止或断开时补发 0 A。",
+        CyclicKind::Current => " 直接 Iq 不叠加齿槽补偿，停止或断开时补发 0 A。",
+        CyclicKind::Motion => " 前馈使用输出轴 Nm。电流内环启用齿槽表时，零增益和 0 Nm 也参与补偿。",
         _ => " 循环中修改数值（回车或拖动）立即替换正在发送的目标。",
     };
     format!("{mode}{extra}")

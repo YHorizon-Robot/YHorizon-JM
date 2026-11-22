@@ -64,11 +64,14 @@ uint8_t Servo_GetInnerLoop(void) { return CFG_INNER_LOOP_CURRENT; }
 ServoMode_t Servo_PauseForFlash(void) { ++gates; return Servo_GetMode(); }
 void Servo_ResumeAfterFlash(ServoMode_t previous) { (void)previous; }
 uint8_t Servo_ClearFault(void) { fault = 0; return 1; }
+static float direct_amps;
 static float velocity_gain = 1;
 void Servo_GetVelocityGains(float *p, float *i) { *p = velocity_gain; *i = 0; }
 void Servo_GetPositionGains(float *p, float *i, float *d) { *p = 1; *i = 0; if (d) { *d = 0; } }
 uint8_t Servo_GetCtrlMode(void) { return ctrl_mode; }
 void Servo_SetCtrlMode(uint8_t m) { assert(lock_depth); ctrl_mode = m; }
+void Servo_SetDirectIq(float amps)
+{ assert(lock_depth && !lost); ++moves; direct_amps = amps; }
 void Servo_SetMotion(float p, float v, float ff)
 { assert(lock_depth && !lost); ++moves; applied_p = p; applied_v = v; demand = ff; }
 void Servo_SetVelocityCmd(float v) { assert(lock_depth); ++moves; applied_v = v; }
@@ -129,9 +132,9 @@ static void TestSession(void)
 #elif CFG_HIGHTORQUE
   Near(demand, Cfg_NmToPu(-1));
 #elif CFG_C620
-  Near(demand, -1000.0f * 20/16384 * CFG_V_LIMIT/CFG_I_LIMIT_A);
+  Near(direct_amps, -1000.0f * 20/16384);
 #else
-  Near(demand, -CFG_V_LIMIT/CFG_I_LIMIT_A);
+  Near(direct_amps, -1.0f);
 #endif
   Push(move); Send(stop); assert(moves == 1 && gates);
   Comm_OnCanLoss(); Send(move); assert(moves == 1);
@@ -191,9 +194,9 @@ static void TestWire(void)
   Send(arm); Send(v); Near(applied_v, 100*RAD_PER_DEG); assert(ctrl_mode == SERVO_CTRL_VELOCITY);
   v.data[0]=0xA1; v.data[4]=100; v.data[5]=0; Send(v);
 #if CFG_RMD_X
-  Near(demand, CFG_V_LIMIT/CFG_I_LIMIT_A);
+  Near(direct_amps, 1.0f);
 #else
-  Near(demand, 100*16.5f/2048 * CFG_V_LIMIT/CFG_I_LIMIT_A);
+  Near(direct_amps, 100*16.5f/2048);
 #endif
 #elif CFG_AK60_6
   Send(arm); assert(!reply.extended && reply.id==2 && reply.dlc==8 && reply.data[0]==2 &&

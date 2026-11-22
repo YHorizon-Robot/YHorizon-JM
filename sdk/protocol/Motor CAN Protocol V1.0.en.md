@@ -17,11 +17,18 @@ The frame layout is identical for both inner loops. `t_ref`, the feedforward and
 
 The active inner loop is reported in `GET_STATUS` Byte7 bit7. Outer-loop gains mean something different under the current loop; retune them when switching from the voltage loop.
 
+### Direct Iq extension
+
+Read current configuration page 2 first. Bit 0 in the little-endian feature word at bytes 6–7 enables direct Iq. Send a standard eight-byte data frame to `0x4C0 + ID` with signed little-endian milliamperes in bytes 0–1 and zero in bytes 2–7. A calibrated node accepts it in RUNNING with the Motion outer loop and current inner loop. Accepted frames receive normal motion feedback. Over-limit current and nonzero reserved bytes are ignored.
+
+Motion feedforward uses output-shaft Nm. With a valid enabled map, even pure torque and active zero torque receive cogging compensation at low speed. Direct Iq bypasses the map and retains current slew and saturation. Disable gates the bridge. Update older hosts that encode amperes as Motion torque before using direct current.
+
 ## CAN IDs
 
 | CAN ID | Direction | Function |
 | --- | --- | --- |
 | `0x100 + ID` | Host → motor | Motion command |
+| `0x4C0 + ID` | Host → motor | Direct Iq command |
 | `0x140 + ID` | Host → motor | Velocity command |
 | `0x180 + ID` | Host → motor | SET gains |
 | `0x180 + ID` | Motor → host | GET gains reply |
