@@ -9,7 +9,7 @@ YHorizon-JM 是一个源文件完全公开的开源关节电机项目：机械�
 YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD, EasyEDA Pro PCB project, schematic, Gerber, BOM, FOC firmware, a Rust host, and a communication SDK. Software is GPLv3; hardware and project documentation are CERN-OHL-S. Both allow commercial use if their obligations are met. A separate commercial license is available via WeChat Yet_Latitude. Sharing, reposting, and recommending this project is welcome.
 -->
 
-开源关节电机。喜欢就请点个Star吧，当前仓库里的固件、上位机、通信 SDK 和工具面向第一版样机：Classic CAN、GD32F303 驱动板。固件 1.6，上位机 0.3.0，通信 SDK 0.1.0。
+开源关节电机。项目网站：[https://yhorizon.tech/jm/](https://yhorizon.tech/jm/)。喜欢就请点个Star吧，当前仓库里的固件、上位机、通信 SDK 和工具面向量产机的开源版本：Classic CAN、GD32F303 驱动板。固件 1.6，上位机 0.3.0，通信 SDK 0.1.0。
 
 > **本项目按开源许可证公开。**
 > 机械、电控、固件和 SDK 的源文件已全部公开。
@@ -18,28 +18,26 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 > 使用本项目造成的人身伤害、设备损坏或其它损失，由使用者自行承担。详见 [SECURITY.md](SECURITY.md)。
 
 <p align="center">
-  <img src="images/Front.jpeg" alt="输出法兰 / 正面" width="48%"/>
-  <img src="images/Back.jpeg" alt="后端盖 / 接线" width="48%"/>
+  <img src="images/Standing.jpg" alt="量产机的开源版本整机" width="48%"/>
+  <img src="images/Flange.jpg" alt="输出法兰" width="48%"/>
 </p>
 <p align="center">
-  <img src="images/Side.jpeg" alt="侧面" width="48%"/>
-  <img src="images/Inside.jpeg" alt="内部驱动板" width="48%"/>
+  <img src="images/Linkage.jpg" alt="装在连接杆上" width="70%"/>
 </p>
-
 <p align="center">
-  正面（输出法兰）· 背面（电源与指示灯）· 侧面 · 内部驱动板
+  量产机的开源版本 · 输出法兰 · 装在连接杆上
 </p>
 
 <p align="center">
-  <img src="images/CAD.jpeg" alt="机械 CAD" width="70%"/>
+  <img src="images/YH-JM1-section-A-A.png" alt="YH-JM1 轴向剖面 A—A" width="70%"/>
 </p>
 <p align="center">
-  机械结构（CAD）
+  轴向剖面 A—A
 </p>
 
 ## 当前电机
 
-一体化关节，行星减速。第一版机械与电控：
+一体化关节，行星减速。量产机的开源版本的机械与电控：
 
 | 项目 | 现状 |
 | --- | --- |
@@ -125,7 +123,7 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 | `sdk/protocol/` | CAN 协议 |
 | `docs/` | 校准、电流环、多轴同步、Ubuntu 说明，以及尚未做进固件的协议兼容笔记 |
 | `tools/` | 环境、编译、烧录脚本 |
-| `images/` | 样机照片、CAD、CNC 下单注意事项与套件截图 |
+| `images/` | 量产机的开源版本照片、轴向剖面、CNC 下单注意事项与套件截图 |
 
 ## 固件
 
@@ -195,7 +193,7 @@ Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_gro
 
 ## 商业合作
 
-开源许可证允许商用，条件是继续公开受 copyleft 约束的衍生软件和硬件设计。仓库里的结构偏学习、易加工和低成本，不适合直接当作量产产品。
+开源许可证允许商用，条件是继续公开受 copyleft 约束的衍生软件和硬件设计。开源版为考虑加工，可用但不保证最优性能和长时间稳定；要量产版请联系我们。
 
 希望在不公开修改的情况下集成、制造或销售，请联系微信 **Yet_Latitude** 另签商业许可。模板见 [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md)。未书面签署的模板不会生效，也不改变开源许可证已经给出的权利。
 

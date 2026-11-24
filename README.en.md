@@ -9,7 +9,7 @@ Software is GPLv3. Hardware and project documentation are CERN-OHL-S. Both allow
 YHorizon-JM 的软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，遵守开源义务即可商用。希望闭源使用的，请联系微信 Yet_Latitude。欢迎转发、分享和宣传。
 -->
 
-Open-source joint motor. The firmware, host, communication SDK, and tools in this repository target the first prototype: Classic CAN, GD32F303 driver board. Firmware 1.6, host 0.3.0, communication SDK 0.1.0.
+Open-source joint motor. Project site: [https://yhorizon.tech/jm/](https://yhorizon.tech/jm/). The firmware, host, communication SDK, and tools in this repository target the open-source version of the production unit: Classic CAN, GD32F303 driver board. Firmware 1.6, host 0.3.0, communication SDK 0.1.0.
 
 > **This project is published under open-source licenses.**
 > Mechanical, electronics, firmware, and SDK sources are all published.
@@ -18,28 +18,26 @@ Open-source joint motor. The firmware, host, communication SDK, and tools in thi
 > Anyone who uses this project assumes the risk of personal injury, equipment damage, and other loss. See [SECURITY.en.md](SECURITY.en.md).
 
 <p align="center">
-  <img src="images/Front.jpeg" alt="Output flange / front" width="48%"/>
-  <img src="images/Back.jpeg" alt="Rear cover / wiring" width="48%"/>
+  <img src="images/Standing.jpg" alt="Open-source version of the production unit" width="48%"/>
+  <img src="images/Flange.jpg" alt="Output flange" width="48%"/>
 </p>
 <p align="center">
-  <img src="images/Side.jpeg" alt="Side" width="48%"/>
-  <img src="images/Inside.jpeg" alt="Driver board inside" width="48%"/>
+  <img src="images/Linkage.jpg" alt="Mounted on a connecting link" width="70%"/>
 </p>
-
 <p align="center">
-  Front (output flange) · Rear (power and LEDs) · Side · Internal driver board
+  Open-source version of the production unit · output flange · mounted on a connecting link
 </p>
 
 <p align="center">
-  <img src="images/CAD.jpeg" alt="Mechanical CAD" width="70%"/>
+  <img src="images/YH-JM1-section-A-A.png" alt="YH-JM1 axial section A—A" width="70%"/>
 </p>
 <p align="center">
-  Mechanical layout (CAD)
+  Axial section A—A
 </p>
 
 ## Current actuator
 
-Integrated joint with a planetary gearbox. First-revision mechanics and electronics:
+Integrated joint with a planetary gearbox. Mechanics and electronics of the open-source version of the production unit:
 
 | Item | Status |
 | --- | --- |
@@ -125,7 +123,7 @@ Use of the project must meet the GPLv3 and CERN-OHL-S obligations. To keep deriv
 | `sdk/protocol/` | CAN protocol |
 | `docs/` | Commissioning, current loop, group sync, Ubuntu notes, and protocol-compatibility notes not yet in the firmware |
 | `tools/` | Setup, build, and flash scripts |
-| `images/` | Prototype photos, CAD, CNC order notes, and kit screenshot |
+| `images/` | Photos of the open-source version of the production unit, axial section, CNC order notes, and kit screenshot |
 
 ## Firmware
 
@@ -195,7 +193,7 @@ The RS05 / DM4310 notes in `docs/` are not implemented by this firmware. The com
 
 ## Commercial cooperation
 
-The open-source licenses allow commercial use if copyleft derivatives stay public. The design favors learning, easy machining, and low cost, so it is a poor fit for a mass-produced product as it stands.
+The open-source licenses allow commercial use if copyleft derivatives stay public. The open-source version is designed for machining. It works, but optimal performance and long-term stability are not guaranteed. Contact us for the production version.
 
 For integration, manufacture, or sale without releasing your modifications, contact WeChat **Yet_Latitude** for a commercial license. The template is [`COMMERCIAL-LICENSE.md`](COMMERCIAL-LICENSE.md). An unsigned template grants nothing and does not change the rights already given by the open-source licenses.
 
