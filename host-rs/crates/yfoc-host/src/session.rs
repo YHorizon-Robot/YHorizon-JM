@@ -1671,7 +1671,7 @@ impl BusSession {
                     self.enqueue(id, Frame { id: ids(id).iq_cmd, data });
                 }
                 if let Some(dev) = self.devices.get_mut(&id) {
-                    dev.direct_current = amps != 0.0;
+                    dev.direct_current = cyclic || amps != 0.0;
                 }
                 self.log(format!("TX Iq {amps} A"));
             }
@@ -2134,7 +2134,7 @@ mod tests {
     fn stop_and_disconnect_zero_only_direct_current() {
         let (mut session, mut bus) = fresh();
         negotiate(&mut session, &mut bus, 0);
-        session.command(cur(1.0, true), 10, &mut bus).unwrap();
+        session.command(cur(0.0, true), 10, &mut bus).unwrap();
         session.poll(10, &mut bus);
         let mode_seq = bus.sent.iter().rev().find(|f| f.data[0] == CMD_SET_MODE).unwrap().data[1];
         bus.inbox.push_back(ack(1, CMD_SET_MODE, mode_seq, 0));

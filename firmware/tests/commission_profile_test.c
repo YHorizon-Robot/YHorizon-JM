@@ -166,6 +166,8 @@ static void CheckNativeWire(void)
   Queue(iq); Comm_Process(); Near(RunAtRest(),-0.5f);
   iq.data[7]=0; iq.data[1]=0x7f;
   Queue(iq); Comm_Process(); Near(RunAtRest(),-0.5f);
+  torque.data[6]=torque.data[7]=0;
+  Queue(torque); Comm_Process(); Near(RunAtRest(),0.2f); assert(bridge);
   iq.data[1]=0;
   Queue(iq); Comm_Process(); Near(RunAtRest(),0); assert(bridge);
   Queue(torque); Queue(disable); Comm_Process(); Near(RunAtRest(),0); assert(!bridge);
