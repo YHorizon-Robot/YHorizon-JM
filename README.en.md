@@ -154,7 +154,9 @@ Motor parameters are in `firmware/Boards/YH_JM/board_config.h`. To switch back t
 
 ## Host
 
-The host is [`host-rs`](host-rs), written in Rust and egui, and it matches firmware 1.6. With no arguments it opens the GUI. The top tabs are Motor, Flash, Commissioning, and Group sync. On the flash page choose YH_JM and `firmware/build/gd32f303/YHorizon-JM.bin`. Behavior is described in [host-rs/README.md](host-rs/README.md). Ubuntu dependencies and SocketCAN are in [docs/ubuntu.md](docs/ubuntu.md). Commissioning steps are in [docs/commissioning.md](docs/commissioning.md).
+Choose the host for the firmware on the actuator. Use the **Rust GUI or CLI** in `host-rs` with native V1 (preset `gd32f303`) for motor control, flashing, commissioning, cogging compensation and group sync. Use the **Python GUI** in `sdk/python/joint_gui.py` with the DM4310, RS05 and CyberGear bench images. For AK60-6, RMD-X, LK-MF, HighTorque, DJI C610 and C620, send and inspect frames using a CAN analyzer or `python-can`. [Connection and protocol-switching guide in Chinese](host-rs/README.md)
+
+Build from the repository root. The Windows binary is `host-rs/target/release/yfoc-host.exe`. Run it without arguments to open the GUI, and rebuild it after switching branches.
 
 ```powershell
 cargo build --release --locked --manifest-path host-rs/Cargo.toml -p yfoc-host
@@ -189,7 +191,7 @@ with Bus("socketcan", "can0") as bus:
 
 On Windows use `Bus("pcan", "PCAN_USBBUS1")`. Queries, modes, disable, and `run_group` are documented in [sdk/README.md](sdk/README.md).
 
-`joint_gui.py` is a separate window for RS05 / CyberGear / DM4310 frames. It does not speak this repository's Motor Protocol V1.0. From `sdk/python`, run `python joint_gui.py` (dependencies are in `requirements.txt`). Codec test: `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
+The Python debug GUI supports the RS05, CyberGear and DM4310 bench images. See the [launch commands and node settings](host-rs/README.md#python-gui-联调). Run the codec tests with `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
 
 ### DM4310 MIT bench image
 
@@ -197,7 +199,7 @@ Build with `.\tools\build.ps1 -Preset gd32f303-dm4310` or `./tools/build.sh --pr
 
 The image handles MIT motion, FC enable, FD disable, FB clear and directed read-only registers 7/8/9/10/21/22/23. For a stationary connection check, send `7FF#0100331500000000` and expect `011#0100331500004841` (PMAX = 12.5 rad). Start a zero-gain, zero-feedforward stream at 100 Hz before enabling. Enable and accepted motion commands have a 100 ms deadline; re-enable after a timeout. FE disarms without saving a zero or acknowledging success. Register writes are ignored.
 
-Position targets use absolute output-shaft radians relative to the JM1 zero. Feedback saturates at the wire limits of ±12.5 rad, ±30 rad/s and ±10 Nm. The bench cap is ±1 A on total Iq demand including cogging compensation. Torque feedback is estimated from measured Iq, D6 reports board temperature (0 if unavailable) and D7 is 0. Hardware timing and vendor-host interoperability still require bench validation.
+Position targets use absolute output-shaft radians relative to the JM1 zero. Feedback saturates at the wire limits of ±12.5 rad, ±30 rad/s and ±10 Nm. The bench cap is ±1 A on total Iq demand including cogging compensation. Torque feedback is estimated from measured Iq, D6 reports board temperature (0 if unavailable) and D7 is 0. A single JM1 was tested using PCAN frames and SWD checks for bridge shutdown after command timeout. Vendor-host interoperability still requires testing.
 
 ### Commission a unit before changing protocols
 

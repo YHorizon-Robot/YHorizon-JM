@@ -154,7 +154,9 @@ Ubuntu：
 
 ## 上位机
 
-上位机在 [`host-rs`](host-rs)，用 Rust 和 egui 写成，对应固件 1.6。没有参数时打开图形界面，顶部是「电机」「烧录」「校准与辨识」「多轴同步」。烧录页选择 YH_JM，镜像用 `firmware/build/gd32f303/YHorizon-JM.bin`。操作见 [host-rs/README.md](host-rs/README.md)，Ubuntu 依赖和 SocketCAN 见 [docs/ubuntu.md](docs/ubuntu.md)。校准步骤见 [docs/commissioning.md](docs/commissioning.md)。
+先按板上固件选择上位机。**原生 V1（`gd32f303`）**使用 `host-rs` 中的 Rust GUI 或 CLI，负责运行控制、烧录、校准与辨识、齿槽补偿及多轴同步。**DM4310、RS05、CyberGear** 兼容镜像使用 `sdk/python/joint_gui.py`。**AK60-6、RMD-X、LK-MF、HighTorque、DJI C610/C620** 使用 CAN 分析仪或 Python 按报文联调。[上位机选型、连接及切换步骤](host-rs/README.md)
+
+在仓库根目录构建。Windows 可执行文件生成在 `host-rs/target/release/yfoc-host.exe`，双击即可打开。该文件随本地构建生成，切换分支后可重新构建。
 
 ```powershell
 cargo build --release --locked --manifest-path host-rs/Cargo.toml -p yfoc-host
@@ -189,7 +191,7 @@ with Bus("socketcan", "can0") as bus:
 
 Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_group` 的说明都在 [sdk/README.md](sdk/README.md)。
 
-`joint_gui.py` 是另一套界面，只用来对照 RS05 / CyberGear / DM4310 的帧，不控制本仓库固件的 Motor Protocol V1.0。在 `sdk/python` 下执行 `python joint_gui.py`（依赖 `requirements.txt`）。编解码单测：`python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`。
+Python 调试 GUI 可联调 RS05、CyberGear、DM4310 兼容镜像，启动命令、节点与反馈 ID 见[Python GUI 联调](host-rs/README.md#python-gui-联调)。编解码单测可用 `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v` 运行。
 
 ### DM4310 MIT 台架镜像
 
@@ -197,7 +199,7 @@ Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_gro
 
 首版支持 MIT 五字段、使能 FC、失能 FD、清故障 FB，以及定向只读寄存器 7/8/9/10/21/22/23。可先发送标准帧 `7FF#0100331500000000` 读取节点 1 的 PMAX，预期 `011#0100331500004841`。运动前检查机械行程，在 GUI 选择“零力矩”（Kp、Kd、前馈为零），以 100 Hz 连续发送，再点使能。收到使能或最后一条运动指令后 100 ms 超时关桥，需要重新使能。兼容层忽略寄存器写入；收到 FE 时关桥，不保存零点、不回成功应答。
 
-P/V/T 线量程分别为 ±12.5 rad、±30 rad/s、±10 Nm。位置为相对本机机械零点的输出轴绝对目标，反馈超出编码范围时饱和。台架镜像把含齿槽补偿的 Iq 目标限制在 ±1 A。反馈力矩为按实测 Iq 换算的输出轴估计值，D6 为板温（不可用时填 0），D7 填 0。原厂主控互通及实物关桥延迟待台架验证。
+P/V/T 线量程分别为 ±12.5 rad、±30 rad/s、±10 Nm。位置为相对本机机械零点的输出轴绝对目标，反馈超出编码范围时饱和。台架镜像把含齿槽补偿的 Iq 目标限制在 ±1 A。反馈力矩为按实测 Iq 换算的输出轴估计值，D6 为板温（不可用时填 0），D7 填 0。单台 JM1 已用 PCAN 发帧和 SWD 回读验证停发关桥。原厂主控互通仍需实测。
 
 在本机测试通信状态机和报文字节可运行 `cmake -S firmware/tests -B firmware/build/host-tests -G Ninja`、`cmake --build firmware/build/host-tests`、`ctest --test-dir firmware/build/host-tests --output-on-failure`。
 
@@ -233,7 +235,7 @@ RS05 沿用仓库 SDK 的两套量程，控制为 ±12.57 rad、±33 rad/s、±1
 python sdk/python/joint_gui.py --protocol CyberGear --node 1 --host 0xFD
 ```
 
-各镜像保留 V1 的 A/B 和 legacy 校准页。只换镜像时复用本机校准；更换电机、编码器或相线后回 V1 重校。所有兼容镜像将含补偿的 Iq **目标**限制在 ±1 A，100 ms 未续期会在主循环关桥；查询不续期，掉线或 CAN 接收丢失后需重新握手。原厂主控互通、实际峰值电流、最坏关桥延迟和 DJI 多机反馈负载仍需台架测量。
+各镜像保留 V1 的 A/B 和 legacy 校准页。只换镜像时复用本机校准；更换电机、编码器或相线后回 V1 重校。所有兼容镜像将含补偿的 Iq **目标**限制在 ±1 A，100 ms 未续期会在主循环关桥；查询不续期，掉线或 CAN 接收丢失后需重新握手。单台空载 JM1 上已验证各镜像的报文、正反小指令和停发关桥。原厂主控互通、实际峰值电流、最坏关桥延迟和 DJI 多机反馈负载仍需对应台架测量。
 
 运行 `python tools/package-compat.py` 可重建九个兼容镜像与同版 V1，生成 `firmware/build/JM1-CAN-bench.zip`。包内 manifest 记录各 ELF 的 SHA-256 与 Flash 加载末址，脚本校验所有有效加载段均在 `0x08000000..0x0803E7FF` 内。回退时停机、停发，将包内 `JM1-v1.elf` 解压后用 `.\tools\flash.ps1 -ElfFile <文件路径>` 按页刷回，并在 V1 下复读原机参数。
 
