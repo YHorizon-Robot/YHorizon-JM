@@ -2,14 +2,7 @@
 
 [中文](README.md) | [English](README.en.md)
 
-<!--
-YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD (CNC part STEP, assembly STEP, gear drawings), electronics (EasyEDA Pro / JLCPCB source project, schematic, Gerber, BOM), GD32F303 FOC firmware, a Rust host, and a communication SDK. It can be fully replicated.
-Specs: 57 mm diameter, 52 mm thick, about 300 g, 8:1 planetary gearbox, 3 Nm continuous, 6 Nm peak, up to 48 V, Classic CAN 1 Mbps.
-Software is GPLv3. Hardware and project documentation are CERN-OHL-S. Both allow commercial use when their obligations are met. For closed-source use, contact WeChat Yet_Latitude for a separate commercial license. Sharing, reposting, recommending, and promoting this project is welcome.
-YHorizon-JM 的软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，遵守开源义务即可商用。希望闭源使用的，请联系微信 Yet_Latitude。欢迎转发、分享和宣传。
--->
-
-Open-source joint motor. The firmware, host, communication SDK, and tools in this repository target the first prototype: Classic CAN, GD32F303 driver board. Firmware 1.6, host 0.3.0, communication SDK 0.1.0.
+This protocol-compatibility branch provides native Motor Protocol V1.0 firmware for the YHorizon-JM actuator and bench images for RS05, CyberGear, DM4310 and other protocols. It includes firmware 1.6, Rust host 0.3.0 and communication SDK 0.1.0. [Choose a host for your firmware](host-rs/README.md) (Chinese).
 
 > **This project is published under open-source licenses.**
 > Mechanical, electronics, firmware, and SDK sources are all published.
@@ -17,115 +10,32 @@ Open-source joint motor. The firmware, host, communication SDK, and tools in thi
 > It does not guarantee reliability or safety, and it is not a product certification or quality commitment.
 > Anyone who uses this project assumes the risk of personal injury, equipment damage, and other loss. See [SECURITY.en.md](SECURITY.en.md).
 
-<p align="center">
-  <img src="images/Front.jpeg" alt="Output flange / front" width="48%"/>
-  <img src="images/Back.jpeg" alt="Rear cover / wiring" width="48%"/>
-</p>
-<p align="center">
-  <img src="images/Side.jpeg" alt="Side" width="48%"/>
-  <img src="images/Inside.jpeg" alt="Driver board inside" width="48%"/>
-</p>
+## Hardware and purchasing
 
-<p align="center">
-  Front (output flange) · Rear (power and LEDs) · Side · Internal driver board
-</p>
+The main branch maintains the hardware documentation. Choose the mechanical version before ordering parts.
 
-<p align="center">
-  <img src="images/CAD.jpeg" alt="Mechanical CAD" width="70%"/>
-</p>
-<p align="center">
-  Mechanical layout (CAD)
-</p>
+- [Actuator specifications and supply requirements](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/README.en.md#current-actuator)
+- [Production parts and assemblies](https://github.com/YHorizon-Robot/YHorizon-JM/tree/main/mechanical/MPdrawing/cad) · [Quanzhou CNC kit parts](https://github.com/YHorizon-Robot/YHorizon-JM/tree/main/mechanical/cnc) · [Kit assembly](https://github.com/YHorizon-Robot/YHorizon-JM/tree/main/mechanical/asm)
+- [Mechanical BOM, standard hardware and purchasing spreadsheet](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/mechanical/bom/README.md) (Chinese) · [Driver board BOM](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/hardware/bom/BOM_YHorizon-JM.xlsx)
+- [Xianyu listings and screenshots for the kit and assembled actuator preorder](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/README.en.md#build-one)
 
-## Current actuator
+QQ discussion group **1065885316**.
 
-Integrated joint with a planetary gearbox. First-revision mechanics and electronics:
-
-| Item | Status |
-| --- | --- |
-| Envelope | Diameter 57 mm, thickness 52 mm |
-| Mass | About 300 g |
-| Motor | Frameless WK4310H, 14 pole pairs |
-| Gear | Planetary, ratio 8 |
-| Torque | 3 Nm continuous, 6 Nm peak |
-| Supply | Up to 48 V |
-| Encoder | Dual MT6701 vernier (30/31 teeth); multi-turn motor shaft is recovered, then divided by the gear ratio for the output shaft |
-| MCU | GD32F303CCT6, 112 MHz |
-| Power stage | FD6288 three-phase driver |
-| Bus | Classic CAN 2.0, 1 Mbps, Motor Protocol V1.0 |
-| Control | Firmware 1.6. Current inner loop by default; voltage inner loop optional. Motion / velocity / position modes, plus group sync for 1–16 axes |
+## Native protocol and multi-axis sync
 
 JM1 loads its saved calibration and validated current PI on startup. A unit without a saved current tune uses the WK4310H board defaults. Protocol: [`sdk/protocol/Motor CAN Protocol V1.0.en.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md).
 
-Test video: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
-
-Group sync is already implemented on Classic CAN in firmware 1.6. See [Multi-axis position sync](docs/multi-axis.md). A later revision still plans to move the MCU to **GD32C113** for **CAN FD**. Mechanical interfaces and the gear train should stay compatible where possible; electronics and protocol will change with CAN FD.
-
-## Build one
-
-Start with the two BOMs for sourcing parts and fabricating the board. Do not order from other files first:
-
-- Mechanical parts and purchased hardware: [`mechanical/bom/组装购买清单.xlsx`](mechanical/bom/组装购买清单.xlsx)
-- Driver electronics: [`hardware/bom/BOM_YHorizon-JM.xlsx`](hardware/bom/BOM_YHorizon-JM.xlsx)
-
-PCB source (JLCPCB / EasyEDA Pro): [`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2). Gerber files: [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip). Schematic PDF: [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf). Discussion: QQ group **1065885316**.
-
-Assembly STEP: [`mechanical/asm/YHorizon-JM-asm.STEP`](mechanical/asm/YHorizon-JM-asm.STEP). CNC parts are in `mechanical/cnc/`. **CNC parts are not guaranteed to match ours; try fits and adjust hole positions to your own machining.** Check the threaded-hole notes before ordering:
-
-<p align="center">
-  <img src="images/CNC下单注意事项螺纹孔1.png" alt="CNC order notes: threaded holes 1" width="48%"/>
-  <img src="images/CNC下单注意事项螺纹孔2.png" alt="CNC order notes: threaded holes 2" width="48%"/>
-</p>
-<p align="center">
-  <img src="images/CNC下单注意事项螺纹孔3.png" alt="CNC order notes: threaded holes 3" width="48%"/>
-  <img src="images/CNC下单注意事项螺纹孔4.png" alt="CNC order notes: threaded holes 4" width="48%"/>
-</p>
-<p align="center">
-  CNC order notes (threaded holes)
-</p>
-
-The YHorizon kit we put together is also on Xianyu, 50 sets (code **CZ007**): [Xianyu listing](https://m.tb.cn/h.jNge4x4?tk=GeXY6fdh1uc).
-
-<p align="center">
-  <img src="images/xianyu.jpeg" alt="Xianyu YHorizon kit listing" width="35%"/>
-</p>
-<p align="center">
-  Xianyu YHorizon kit listing
-</p>
-
-You also need tools that are not on the BOM, including:
-
-- An arbor press (bearings, planet carrier, and similar fits)
-- Loctite threadlocker / retaining compound
-- Hex keys (Allen wrenches)
-- Programmer cable: 0.8 mm insulation-displacement (pierce) terminal wire
-
-Videos:
-
-- Test: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
-- Full assembly: [Douyin assembly video](https://v.douyin.com/Lvc5RXRxO6M/)
-
-Use of the project must meet the GPLv3 and CERN-OHL-S obligations. To keep derivative work closed, use [Commercial cooperation](#commercial-cooperation). Read [SECURITY.en.md](SECURITY.en.md) before assembly or power-up.
+Native firmware 1.6 supports synchronized position control for 1–16 axes over Classic CAN. [Multi-axis position control guide](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/guide/multi-axis.md) (Chinese).
 
 ## Layout
 
 | Path | Contents |
 | --- | --- |
-| `mechanical/asm/` | Assembly STEP |
-| `mechanical/cnc/` | CNC models |
-| `mechanical/gears/` | Gears |
-| `mechanical/bom/` | Mechanical BOM |
-| `hardware/easyeda/` | EasyEDA Pro / JLCPCB source project |
-| `hardware/schematic/` | Schematics |
-| `hardware/fabrication/` | Board fabrication files |
-| `hardware/bom/` | Electronics BOM |
 | `firmware/` | GD32F303 firmware 1.6. Board parameters live in `firmware/Boards/YH_JM/` |
 | `host-rs/` | Rust host 0.3.0 |
 | `sdk/` | Communication SDK 0.1.0. `sdk/python/joint_gui.py` is still the RS05 / CyberGear / DM4310 debug UI |
 | `sdk/protocol/` | CAN protocol |
-| `docs/` | Commissioning, current loop, group sync, Ubuntu notes, and protocol-compatibility notes not yet in the firmware |
 | `tools/` | Setup, build, and flash scripts |
-| `images/` | Prototype photos, CAD, CNC order notes, and kit screenshot |
 
 ## Firmware
 
@@ -191,7 +101,7 @@ with Bus("socketcan", "can0") as bus:
 
 On Windows use `Bus("pcan", "PCAN_USBBUS1")`. Queries, modes, disable, and `run_group` are documented in [sdk/README.md](sdk/README.md).
 
-The Python debug GUI supports the RS05, CyberGear and DM4310 bench images. See the [launch commands and node settings](host-rs/README.md#python-gui-联调). Run the codec tests with `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
+`joint_gui.py` is a separate window for the RS05, CyberGear, and DM4310 bench images. It does not speak Motor Protocol V1.0 and it is not the Rust host in `host-rs`. Launch commands, host IDs, and the operating sequence are in [Python GUI](host-rs/README.md#python-gui-联调) (Chinese). AK60-6, RMD-X, LK-MF, HighTorque, and DJI C610/C620 are not in that window; use the frame sections below. Codec test: `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`.
 
 ### DM4310 MIT bench image
 

@@ -2,14 +2,7 @@
 
 [中文](README.md) | [English](README.en.md)
 
-<!--
-YHorizon-JM 是一个源文件完全公开的开源关节电机项目：机械结构（CNC 零件 STEP、装配体 STEP、齿轮图纸）、电控硬件（嘉立创 EDA Pro 源工程、原理图、Gerber、BOM）、GD32F303 FOC 固件、Rust 上位机和通信 SDK 全部公开，可以完整复刻。
-参数：直径 57 mm，厚度 52 mm，约 300 g，行星减速 8:1，额定 3 Nm，峰值 6 Nm，最高 48 V，Classic CAN 1 Mbps。
-软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，两套许可证都允许在遵守开源义务的前提下商用。希望闭源集成或免除这些义务的，请联系微信 Yet_Latitude 另签商业许可。欢迎转发、分享、推荐和宣传本项目。
-YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD, EasyEDA Pro PCB project, schematic, Gerber, BOM, FOC firmware, a Rust host, and a communication SDK. Software is GPLv3; hardware and project documentation are CERN-OHL-S. Both allow commercial use if their obligations are met. A separate commercial license is available via WeChat Yet_Latitude. Sharing, reposting, and recommending this project is welcome.
--->
-
-开源关节电机。喜欢就请点个Star吧，当前仓库里的固件、上位机、通信 SDK 和工具面向第一版样机：Classic CAN、GD32F303 驱动板。固件 1.6，上位机 0.3.0，通信 SDK 0.1.0。
+YHorizon-JM 关节电机的协议兼容分支提供原生 Motor Protocol V1.0 和 RS05、CyberGear、DM4310 等兼容镜像。固件版本为 1.6，Rust 上位机为 0.3.0，通信 SDK 为 0.1.0。[按已烧录的固件选择上位机](host-rs/README.md)
 
 > **本项目按开源许可证公开。**
 > 机械、电控、固件和 SDK 的源文件已全部公开。
@@ -17,115 +10,32 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 > 不保证功能可靠、不保证使用安全，也不构成任何产品认证或质量承诺。
 > 使用本项目造成的人身伤害、设备损坏或其它损失，由使用者自行承担。详见 [SECURITY.md](SECURITY.md)。
 
-<p align="center">
-  <img src="images/Front.jpeg" alt="输出法兰 / 正面" width="48%"/>
-  <img src="images/Back.jpeg" alt="后端盖 / 接线" width="48%"/>
-</p>
-<p align="center">
-  <img src="images/Side.jpeg" alt="侧面" width="48%"/>
-  <img src="images/Inside.jpeg" alt="内部驱动板" width="48%"/>
-</p>
+## 整机资料与购买
 
-<p align="center">
-  正面（输出法兰）· 背面（电源与指示灯）· 侧面 · 内部驱动板
-</p>
+主分支维护当前硬件资料。复刻或下单时请先确认所选机械版本。
 
-<p align="center">
-  <img src="images/CAD.jpeg" alt="机械 CAD" width="70%"/>
-</p>
-<p align="center">
-  机械结构（CAD）
-</p>
+- [整机规格与供电条件](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/README.md#当前电机)
+- [量产版零件与总装配体](https://github.com/YHorizon-Robot/YHorizon-JM/tree/main/mechanical/MPdrawing/cad) · [铨州 CNC 套件零件](https://github.com/YHorizon-Robot/YHorizon-JM/tree/main/mechanical/cnc) · [套件装配体](https://github.com/YHorizon-Robot/YHorizon-JM/tree/main/mechanical/asm)
+- [机械 BOM、标准件规格及采购表](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/mechanical/bom/README.md) · [驱动板元器件 BOM](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/hardware/bom/BOM_YHorizon-JM.xlsx)
+- [闲鱼套件与整机预售入口及截图](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/README.md#复刻)
 
-## 当前电机
+交流 QQ 群 **1065885316**。
 
-一体化关节，行星减速。第一版机械与电控：
-
-| 项目 | 现状 |
-| --- | --- |
-| 外形 | 直径 57 mm，厚度 52 mm |
-| 重量 | 约 300 g |
-| 电机 | 无框电机 WK4310H，14 对极 |
-| 减速 | 行星减速机，减速比 8 |
-| 扭矩 | 额定 3 Nm，最大 6 Nm |
-| 供电 | 最高 48 V |
-| 编码器 | 双 MT6701 游标（30/31 齿），合成电机轴多圈后再除以减速比得到输出轴 |
-| MCU | GD32F303CCT6，112 MHz |
-| 功率级 | FD6288 三相驱动 |
-| 总线 | Classic CAN 2.0，1 Mbps，Motor Protocol V1.0 |
-| 控制 | 固件 1.6。默认电流内环；可改电压内环。运控 / 速度 / 位置三模式，并支持 1～16 轴组同步 |
+## 原生协议与多轴同步
 
 JM1 上电读取本机保存的校准和整定结果。没有经过整定的电流 PI 时，使用 WK4310H 板级默认值。首次装配的单元用 `gd32f303` 镜像和 Rust 上位机的「校准与辨识」页完成设置。协议说明见 [`sdk/protocol/Motor CAN Protocol V1.0.md`](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)（[English](sdk/protocol/Motor%20CAN%20Protocol%20V1.0.en.md)）。
 
-测试视频：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
-
-多轴同步已经在固件 1.6 的 Classic CAN 上实现，见[多轴同步位置控制](docs/multi-axis.md)。后续仍计划把主控换成 **GD32C113**，以支持 **CAN FD**。机械接口与减速方案会尽量保持兼容，电控和协议会随 CAN FD 升级。
-
-## 复刻
-
-先对照两份清单备料、打板，不要直接下单目录里的其它文件：
-
-- 机械零件与外购件：[`mechanical/bom/组装购买清单.xlsx`](mechanical/bom/组装购买清单.xlsx)
-- 驱动器元器件：[`hardware/bom/BOM_YHorizon-JM.xlsx`](hardware/bom/BOM_YHorizon-JM.xlsx)
-
-PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2)。打板也可用 [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip)，原理图 PDF 见 [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf)。交流可加 QQ 群 **1065885316**。
-
-装配体 STEP：[`mechanical/asm/YHorizon-JM-asm.STEP`](mechanical/asm/YHorizon-JM-asm.STEP)。CNC 零件在 `mechanical/cnc/`。**CNC 加工不保证和我们完全一致，建议多试、按自己的加工结果修改孔位。** 下单前请对照螺纹孔注意事项：
-
-<p align="center">
-  <img src="images/CNC下单注意事项螺纹孔1.png" alt="CNC 下单注意事项：螺纹孔 1" width="48%"/>
-  <img src="images/CNC下单注意事项螺纹孔2.png" alt="CNC 下单注意事项：螺纹孔 2" width="48%"/>
-</p>
-<p align="center">
-  <img src="images/CNC下单注意事项螺纹孔3.png" alt="CNC 下单注意事项：螺纹孔 3" width="48%"/>
-  <img src="images/CNC下单注意事项螺纹孔4.png" alt="CNC 下单注意事项：螺纹孔 4" width="48%"/>
-</p>
-<p align="center">
-  CNC 下单注意事项（螺纹孔）
-</p>
-
-也可以在闲鱼上买我们整理的 YHorizon 套件，一共 50 套（口令 **CZ007**）：[闲鱼链接](https://m.tb.cn/h.jNge4x4?tk=GeXY6fdh1uc)。
-
-<p align="center">
-  <img src="images/xianyu.jpeg" alt="闲鱼 YHorizon 套件页面" width="35%"/>
-</p>
-<p align="center">
-  闲鱼 YHorizon 套件页面
-</p>
-
-清单之外需要自己准备的工具（不限于）：
-
-- 压力机
-- 乐泰（Loctite）螺纹胶 / 固持胶
-- 内六角扳手、小十字螺丝刀
-- 烧录器线：0.8 mm 刺破式端子线
-
-装配过程请看下面的视频：
-
-- 测试：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
-- 总装：[抖音装配视频](https://v.douyin.com/Lvc5RXRxO6M/)
-
-使用时须遵守 GPLv3 与 CERN-OHL-S 的公开义务。不想公开衍生作品时，请走[商业合作](#商业合作)。装配和上电前请阅读 [SECURITY.md](SECURITY.md)。
+原生固件 1.6 支持通过 Classic CAN 同步控制 1～16 轴。[多轴同步位置控制指南](https://github.com/YHorizon-Robot/YHorizon-JM/blob/main/guide/multi-axis.md)
 
 ## 仓库结构
 
 | 目录 | 内容 |
 | --- | --- |
-| `mechanical/asm/` | 装配体 STEP |
-| `mechanical/cnc/` | CNC 模型 |
-| `mechanical/gears/` | 齿轮 |
-| `mechanical/bom/` | 零件 BOM |
-| `hardware/easyeda/` | 嘉立创 EDA Pro 源工程 |
-| `hardware/schematic/` | 原理图 |
-| `hardware/fabrication/` | 制板文件 |
-| `hardware/bom/` | 元器件 BOM |
 | `firmware/` | GD32F303 固件 1.6。板级参数在 `firmware/Boards/YH_JM/` |
 | `host-rs/` | Rust 上位机 0.3.0 |
 | `sdk/` | 通信 SDK 0.1.0。`sdk/python/joint_gui.py` 仍是 RS05 / CyberGear / DM4310 联调界面 |
 | `sdk/protocol/` | CAN 协议 |
-| `docs/` | 校准、电流环、多轴同步、Ubuntu 说明，以及尚未做进固件的协议兼容笔记 |
 | `tools/` | 环境、编译、烧录脚本 |
-| `images/` | 样机照片、CAD、CNC 下单注意事项与套件截图 |
 
 ## 固件
 
@@ -191,7 +101,7 @@ with Bus("socketcan", "can0") as bus:
 
 Windows 用 `Bus("pcan", "PCAN_USBBUS1")`。查询、模式、关桥和 `run_group` 的说明都在 [sdk/README.md](sdk/README.md)。
 
-Python 调试 GUI 可联调 RS05、CyberGear、DM4310 兼容镜像，启动命令、节点与反馈 ID 见[Python GUI 联调](host-rs/README.md#python-gui-联调)。编解码单测可用 `python -m unittest discover -s sdk/python -p test_joint_protocols.py -v` 运行。
+`joint_gui.py` 是另一套界面，只联调 RS05、CyberGear、DM4310 兼容镜像。它不控制原生固件的 Motor Protocol V1.0，也不是 `host-rs` 里的 Rust 上位机。窗口里做使能、失能、标零、清故障，以及位置、速度、阻抗和力矩。启动命令、主站 ID 和操作顺序见 [Python GUI 联调](host-rs/README.md#python-gui-联调)。AK60-6、RMD-X、LK-MF、HighTorque、DJI C610/C620 不走这个窗口，按下面各节用分析仪发帧。编解码单测：`python -m unittest discover -s sdk/python -p test_joint_protocols.py -v`。
 
 ### DM4310 MIT 台架镜像
 

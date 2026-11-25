@@ -103,7 +103,11 @@ yfoc-host --interface socketcan --channel can0 --id 1 --listen
 
 ## Python GUI 联调
 
-在仓库根目录执行，首次使用先装 Python 依赖。选择与当前固件匹配的那一条启动命令。示例仍以节点 3 为例。
+`sdk/python/joint_gui.py` 是另一套界面，用 PySide6 写成，只讲 RS05、CyberGear、DM4310 三种兼容镜像。原生固件 Motor Protocol V1.0 仍用上面的 Rust 上位机 `yfoc-host`：烧录、校准、参数辨识和多轴同步都不在这个 Python 窗口里。板上如果还是 `gd32f303` 原生镜像，打开 `joint_gui.py` 不会得到本协议的反馈。
+
+窗口里可以做的事：选择协议、连接 CAN、使能、失能、标零、清故障，按位置、速度、阻抗或力矩下发，并看位置、速度、力矩、温度、状态和三条滚动曲线。协议下拉必须和已经烧进板子的镜像一致。编解码在 `sdk/python/joint_protocols.py`。
+
+在仓库根目录执行。首次使用先装依赖。下面以节点 3、PCAN 第一只适配器为例。Linux 把 `--interface pcan --channel PCAN_USBBUS1` 换成 `--interface socketcan --channel can0`，并先 `sudo ip link set can0 up type can bitrate 1000000`。
 
 ```powershell
 python -m pip install -r sdk/python/requirements.txt
@@ -117,6 +121,19 @@ python sdk/python/joint_gui.py --interface pcan --channel PCAN_USBBUS1 --protoco
 # gd32f303-cybergear，兼容固件的主站 ID 固定为 0xFD
 python sdk/python/joint_gui.py --interface pcan --channel PCAN_USBBUS1 --protocol CyberGear --node 3 --host 0xFD
 ```
+
+`--node` 是电机节点号，`--host` 是主站 ID。DM4310 的主站 ID 填 `0x10 + 节点号`，所以上面节点 3 用 `0x13`。RS05 和 CyberGear 的主站固定 `0xFD`。三条命令不要混用：协议、镜像、主站 ID 必须是同一套。
+
+量程由协议决定，窗口切换协议时会改提示：
+
+| 协议 | 位置 | 速度 | 力矩 |
+| --- | --- | --- | --- |
+| RS05 控制帧 | ±12.57 rad | ±33 rad/s | ±14 Nm |
+| RS05 反馈帧 | ±4π rad | ±50 rad/s | ±5.5 Nm |
+| CyberGear | ±4π rad | ±30 rad/s | ±12 Nm |
+| DM4310 | ±12.5 rad | ±30 rad/s | ±10 Nm |
+
+Kp 为 0..500，Kd 为 0..5。位置是相对本机机械零点的输出轴角度。
 
 1. 点「连接」。RS05 和 CyberGear 可点「Ping」，检查收帧日志中的芯片标识回复。DM4310 可用分析仪发送 STD `7FF#0300331500000000`，期待 STD `013#0300331500004841`。这条查询读取节点 3 的 PMAX。
 2. 确认电机已固定、空载且有行程后，选「零力矩」，将发送频率设为 100 Hz，勾选「连续发送」，再点「使能」。零力矩预设把 Kp、Kd 和力矩前馈设为零。已保存且启用齿槽表的 JM1 此时仍可能产生补偿电流。确认反馈和方向后再给小目标。
