@@ -1,10 +1,10 @@
 # YHorizon-JM 电机上位机使用说明
 
-`yfoc-host` 是 JM1 关节电机的桌面调试工具。电脑通过 **经典 CAN（1 Mbit/s）** 查询节点、下发运动目标、观察反馈，也可以校准电机、整定控制环和运行多轴位置轨迹。写入固件另走 **SWD 烧录器**。本文对应 Rust 上位机 **0.3.0**、YH_JM 板卡和使用 Motor Protocol V1.0 的 **1.6 固件**。
+`yfoc-host` 是 JM1 关节电机的桌面调试工具，用 Rust 和 egui 写成。电脑通过 **经典 CAN（1 Mbit/s）** 查询节点、下发运动目标、观察反馈，也可以校准电机、做参数辨识、整定控制环和运行多轴位置轨迹。写入固件另走 **SWD 烧录器**。给自己的程序用的通信库在 [SDK](../sdk/README.md)。本文对应 Rust 上位机 **0.3.0**、YH_JM 板卡和使用 Motor Protocol V1.0 的 **1.6 固件**。YH_JM 默认启用电流内环。
 
 ![电机页全览，标出了选中节点、运行控制、参数和实时示波四个区域](images/motor-overview.png)
 
-图中用节点 3 的台架记录离线展示界面。**①** 点击设备行选择电机，**②** 在「运行控制」给这台电机下发目标，**③** 在右侧读取参数和电流，**④** 在「实时示波」选择设备与曲线。位置曲线和电流读数来自不同次采集。
+图中用节点 3 的台架记录离线展示界面。**①** 点击设备行选择电机，**②** 在「运行控制」给这台电机下发目标，**③** 在右侧读取参数和电流，**④** 在「实时示波」选择设备与曲线。本次电流采样中，实测 Iq 为 0.012 A，Iq_ref 为 0.050 A。位置曲线来自另一次采集。
 
 [启动与连接](#启动与连接) · [单轴控制](#单轴控制) · [反馈与示波](#反馈与示波) · [校准与辨识](#校准与辨识) · [多轴同步](#多轴同步) · [固件烧录](#固件烧录) · [命令行](#命令行) · [常见问题](#常见问题)
 
@@ -20,7 +20,7 @@ cargo build --release --locked -p yfoc-host
 
 Linux 和 macOS 的启动命令为 `./target/release/yfoc-host`。Ubuntu 源码构建需要 C/C++ 编译工具、CMake、pkg-config 和 libudev 开发包。
 
-- **Windows / PCAN-USB**　安装 PEAK 驱动和 PCAN-Basic，确保程序能加载 `PCANBasic.dll`。选 `pcan`，第一只 USB 适配器的通道通常为 `PCAN_USBBUS1`。[PCAN-Basic](https://www.peak-system.com/PCAN-Basic.239.0.html)
+- **Windows / PCAN-USB**　安装 PEAK 驱动和 PCAN-Basic，确保程序能加载 `PCANBasic.dll`。选 `pcan`，第一只 USB 适配器的通道通常为 `PCAN_USBBUS1`。[PCAN-Basic](https://www.peak-system.com/products/software/development-packages/pcan-basic/)
 - **Linux / SocketCAN**　选 `socketcan` 和实际网卡名。若 `can0` 当前为 DOWN，先运行 `sudo ip link set can0 up type can bitrate 1000000`，再用 `ip -details link show can0` 核对速率。
 - **串口 CAN 适配器（含 macOS）**　使用支持 SLCAN 的适配器，选 `slcan` 和对应串口。程序以 115200 打开串口，再向适配器设置 CAN 速率。
 
@@ -104,6 +104,6 @@ Linux 使用相同选项，例如 `./target/release/yfoc-host --interface socket
 
 ## 常见问题
 
-- **能选通道，扫描却没有设备。** 通道列表也包含预设名称。点通道旁的刷新按钮，核对适配器、驱动板供电、CAN_H/CAN_L 接线、总线终端和 1 Mbit/s 速率。确认板上运行 JM1 原生协议固件。RS05 和 DM4310 使用独立的 [Python 联调界面](../sdk/python/joint_gui.py)。
+- **能选通道，扫描却没有设备。** 通道列表也包含预设名称。点通道旁的刷新按钮，核对适配器、驱动板供电、CAN_H/CAN_L 接线、总线终端和 1 Mbit/s 速率。确认板上运行的是本仓库 Motor Protocol V1.0 固件。
 - **有位置曲线，电流一直显示「—」。** 在「电流环」点「刷新配置」，收齐设备返回的限幅、PI 和转矩换算参数后再点「读一次」。缺页时上位机会在 1 秒后重试一次，仍未收齐可手动刷新。持续观察还要开启「电流轮询」。若「信息」显示固件缺少电流协议能力，可先用位置和速度反馈调试。
 - **节点报故障或警告。** 打开顶栏「日志」查看反馈。收到故障状态后，上位机会停发该节点的循环指令。排除原因后再点该行「清故障」。黄色「多圈未建立」属于位置警告，使用绝对位置目标前先核对机械基准和位置读数。故障位、警告位和帧格式见[原生 CAN 协议](../sdk/protocol/Motor%20CAN%20Protocol%20V1.0.md)。

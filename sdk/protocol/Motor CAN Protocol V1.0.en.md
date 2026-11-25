@@ -13,7 +13,7 @@ The frame layout is identical for both inner loops. `t_ref`, the feedforward and
 | Inner loop | Meaning of `t_ref` | Conversion |
 | --- | --- | --- |
 | Voltage | `Vq`, relative to bus voltage | `Vq ≈ t_ref × Vbus` (V) |
-| Current | `Iq` command | `Iq_ref = t_ref × I_LIMIT / V_LIMIT`, default `10 A/pu` |
+| Current | `Iq` command | `Iq_ref = t_ref × I_LIMIT / V_LIMIT`, YH_JM scale `20 A / 0.45 pu ≈ 44.44 A/pu` (read the device configuration) |
 
 The active inner loop is reported in `GET_STATUS` Byte7 bit7. Outer-loop gains mean something different under the current loop; retune them when switching from the voltage loop.
 

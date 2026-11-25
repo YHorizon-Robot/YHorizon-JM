@@ -60,5 +60,5 @@ host-rs/target/
 sdk/target/
 sdk/lib/
 
-# Docs
+# 本地笔记，不上传。公开说明在 guide/
 docs/
