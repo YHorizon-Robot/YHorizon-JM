@@ -13,9 +13,15 @@ YHorizon-JM is an open-source joint motor (robot actuator) with all source files
 
 > **本项目按开源许可证公开。**
 > 机械、电控、固件和 SDK 的源文件已全部公开。
-> GPLv3 与 CERN-OHL-S 允许在遵守开源义务的前提下商用。希望闭源使用的，请另签[商业许可](#商业合作)。
-> 不保证功能可靠、不保证使用安全，也不构成任何产品认证或质量承诺。
+> GPLv3 与 CERN-OHL-S 遵守开源义务。希望闭源使用的，请另签[商业许可](#商业合作)。
 > 使用本项目造成的人身伤害、设备损坏或其它损失，由使用者自行承担。详见 [SECURITY.md](SECURITY.md)。
+
+<p align="center">
+  <img src="images/exploded.png" alt="YHorizon-JM 爆炸图" width="100%"/>
+</p>
+<p align="center">
+  爆炸图
+</p>
 
 <p align="center">
   <img src="images/Standing.jpg" alt="量产机的开源版本整机" width="48%"/>
@@ -123,7 +129,7 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 | `sdk/protocol/` | CAN 协议 |
 | `docs/` | 校准、电流环、多轴同步、Ubuntu 说明，以及尚未做进固件的协议兼容笔记 |
 | `tools/` | 环境、编译、烧录脚本 |
-| `images/` | 量产机的开源版本照片、轴向剖面、CNC 下单注意事项与套件截图 |
+| `images/` | 爆炸图、量产机的开源版本照片、轴向剖面、CNC 下单注意事项与套件截图 |
 
 ## 固件
 

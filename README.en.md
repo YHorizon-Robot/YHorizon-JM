@@ -18,6 +18,13 @@ Open-source joint motor. Project site: [https://yhorizon.tech/jm/](https://yhori
 > Anyone who uses this project assumes the risk of personal injury, equipment damage, and other loss. See [SECURITY.en.md](SECURITY.en.md).
 
 <p align="center">
+  <img src="images/exploded.png" alt="YHorizon-JM exploded view" width="100%"/>
+</p>
+<p align="center">
+  Exploded view
+</p>
+
+<p align="center">
   <img src="images/Standing.jpg" alt="Open-source version of the production unit" width="48%"/>
   <img src="images/Flange.jpg" alt="Output flange" width="48%"/>
 </p>
@@ -123,7 +130,7 @@ Use of the project must meet the GPLv3 and CERN-OHL-S obligations. To keep deriv
 | `sdk/protocol/` | CAN protocol |
 | `docs/` | Commissioning, current loop, group sync, Ubuntu notes, and protocol-compatibility notes not yet in the firmware |
 | `tools/` | Setup, build, and flash scripts |
-| `images/` | Photos of the open-source version of the production unit, axial section, CNC order notes, and kit screenshot |
+| `images/` | Exploded view, photos of the open-source version of the production unit, axial section, CNC order notes, and kit screenshot |
 
 ## Firmware
 
