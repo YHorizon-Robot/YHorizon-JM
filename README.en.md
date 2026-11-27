@@ -90,7 +90,18 @@ See the [website performance section](https://yhorizon.tech/jm/#performance) for
 
 ### Current loop
 
-Firmware 1.6 enables the current inner loop by default on YH_JM. In the Motor page, read Id, Iq, Iq_ref and Vq in the Current Loop tab and send ampere targets from Run Control → Current. The offline replay shows measured Iq of 0.012 A and Iq_ref of 0.050 A. The position trace comes from a separate acquisition.
+Firmware 1.6 enables the current inner loop by default on YH_JM. The FOC controller runs d- and q-axis current PI control at 20 kHz and adjusts PWM using measured current. In normal operation, the d-axis target is zero and the q-axis current `Iq` tracks `Iq_ref`, the current corresponding to the torque command. The board defaults are a 425 Hz PI design bandwidth and a 1.5 kHz current-feedback low-pass cutoff.
+
+**Bench results.** On the same unloaded JM1, each PI setting was tested with 12 d-axis steps at ±0.28 A, sampled at 20 kHz. The 425 Hz setting reached a **0.34 ms** 10%–90% rise time (0.92 ms at 350 Hz), with **8.2%** overshoot in the first 3 ms. After averaging the feedback in 1 ms bins, the median steady-state standard deviation was **12.3 mA** at 425 Hz (14.3 mA at 350 Hz). In this small-current test, the response was faster and the steady-state variation was lower.
+
+<p align="center">
+  <img src="images/current-loop-step-response.png" alt="Unloaded JM1 bench test showing d-axis current steps and tuning scores at the 350 Hz and 425 Hz PI settings" width="100%"/>
+</p>
+<p align="center">
+  JM1 bench test with firmware 1.5. Left shows 12 aligned and averaged steps per setting, smoothed with a five-sample moving average. Right shows the tuning scores by round.
+</p>
+
+In the host, read `Id`, `Iq`, `Iq_ref` and the q-axis voltage output `Vq` under Motor → Current Loop. Send ampere targets from Run Control → Current. The interface example below shows a current reading and a position trace from separate captures.
 
 <p align="center">
   <img src="host-rs/images/motor-overview.png" alt="Host motor page with the current loop reading Iq" width="100%"/>
