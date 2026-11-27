@@ -4,12 +4,16 @@
 
 <!--
 YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD (CNC part STEP, assembly STEP, gear drawings), electronics (EasyEDA Pro / JLCPCB source project, schematic, Gerber, BOM), GD32F303 FOC firmware, a Rust host, and a communication SDK. It can be fully replicated.
-Specs: 58 mm diameter, 58 mm length, 360 g, 8:1 planetary gearbox. Kits and production units ship for 24 V operation. A 48 V bench test measured 5 N·m of output torque. Estimated peak torque is about 10 N·m.
+Specs: 58 mm diameter, 58 mm length, 360 g, 8:1 planetary gearbox. Kits and production units ship for 24 V operation. A 32 V load test ran at 5 N·m for over five minutes, and measured repeatability error was 5 arcminutes. The 48 V bucket-load estimate of 6–8 N·m and the projected peak above 10 N·m are estimates.
 Software is GPLv3. Hardware and project documentation are CERN-OHL-S. Both allow commercial use when their obligations are met. For closed-source use, contact WeChat Yet_Latitude for a separate commercial license. Sharing, reposting, recommending, and promoting this project is welcome.
 YHorizon-JM 的软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，遵守开源义务即可商用。希望闭源使用的，请联系微信 Yet_Latitude。欢迎转发、分享和宣传。
 -->
 
-**[Project website and tutorials (under construction)](https://yhorizon.tech/)** · [Repository guides](guide/README.md) · [Illustrated host manual](host-rs/README.md)
+## [Visit the YHorizon-JM website →](https://yhorizon.tech/jm/)
+
+**[Illustrated assembly and commissioning](https://yhorizon.tech/jm/learn/)** · **[Buy actuators and accessories](https://yhorizon.tech/jm/buy.html)** · **[Performance test videos](https://yhorizon.tech/jm/#performance)**
+
+[Repository guides](guide/README.md) · [Illustrated host manual](host-rs/README.md)
 
 YHorizon-JM is an open-source joint actuator. This branch provides GD32F303 firmware 1.6, Rust host 0.3.0 and communication SDK 0.1.0 for Motor Protocol V1.0 over Classic CAN. For other protocols, firmware images and matching tools, see the [compatibility branch](https://github.com/YHorizon-Robot/YHorizon-JM/blob/jm1-motor-protocol-compat/host-rs/README.md).
 
@@ -23,7 +27,7 @@ YHorizon-JM is an open-source joint actuator. This branch provides GD32F303 firm
   <img src="images/exploded.png" alt="YHorizon-JM exploded view" width="100%"/>
 </p>
 <p align="center">
-  Exploded view
+  Exploded view · <a href="https://yhorizon.tech/jm/#anatomy">Open the interactive 3D assembly and exploded view →</a>
 </p>
 
 <p align="center">
@@ -44,6 +48,13 @@ YHorizon-JM is an open-source joint actuator. This branch provides GD32F303 firm
   Axial section A—A
 </p>
 
+## Website and user resources
+
+- [Assembly and commissioning lessons](https://yhorizon.tech/jm/learn/): choose a starting point for a scratch build, YHorizon kit, Kit Pro or assembled unit. Follow the illustrated assembly, flashing and first-run steps, then explore mechanical fits, FOC, encoders, cascaded control and protocol demonstrations with Agent learning prompts.
+- The [illustrated host manual](host-rs/README.md) and [repository guides](guide/README.md) describe the current firmware, CAN connection, commissioning, current control, plotting and group synchronization.
+- [Performance tests](https://yhorizon.tech/jm/#performance): videos of the 5 N·m load run and 5-arcminute repeatability test, with measured results distinguished from estimates.
+- [Purchase](https://yhorizon.tech/shop/) and [order lookup](https://yhorizon.tech/shop/order.html): accessory photos, independent accessory quantities and promo codes; fulfillment stages, estimated dates, shipping, purchase receipts, receipt confirmation, invoice requests and refunds.
+
 ## Current actuator
 
 The repository has two mechanical sets: the production open-source model, and the Quanzhou CNC model used by the kit.
@@ -62,7 +73,8 @@ Envelope and electronics are the same YH-JM1:
 | Mass | 360 g |
 | Motor | Frameless WK4310H, 14 pole pairs |
 | Gear | Planetary, ratio 8 |
-| Output torque | 5 N·m measured on a 48 V bench. Estimated peak is about 10 N·m. A continuous rating for the 24 V units requires separate testing |
+| Output torque | 5 N·m load run for over five minutes at 32 V, using weight plates and a lever arm |
+| Repeatability error | Measured 5 arcminutes, approximately 0.0833° |
 | Supply | Kits and production units ship for 24 V operation. See the 64 V revision note below |
 | Encoder | Dual MT6701 with 30/31-tooth vernier gears. The theoretical unambiguous span at power-up is 3.875 output turns in total |
 | MCU | GD32F303CCT6, 112 MHz |
@@ -73,6 +85,8 @@ Envelope and electronics are the same YH-JM1:
 **64 V hardware revision.** The published BOM uses six HSBB6066 power MOSFETs (Q1–Q6), whose absolute maximum drain-source voltage is 60 V. A design targeting a 64 V bus requires MOSFETs with sufficient voltage margin. Check the ratings of the bus capacitors, protection devices and power supplies, and measure switching and regenerative voltage peaks before specifying the revised board’s operating limit. [Driver BOM](hardware/bom/BOM_YHorizon-JM.xlsx) · [MOSFET datasheet](https://atta.szlcsc.com/upload/public/pdf/source/20260204/C199340FEBF356CDA717DBD1EAA96350.pdf)
 
 The assembly section below links to the earlier 3 N·m test on the D57 prototype.
+
+See the [website performance section](https://yhorizon.tech/jm/#performance) for the test conditions and videos. The 48 V bucket-load estimate of about 6–8 N·m and projected peak above 10 N·m are estimates, rather than measured rated output.
 
 ### Current loop
 
@@ -123,7 +137,7 @@ Gears and structural parts from the two sets do not mix.
 
 PCB source (JLCPCB / EasyEDA Pro): [`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2). Gerber files: [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip). Schematic PDF: [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf).
 
-Discussion group on QQ: **1065885316**.
+**Buy from the website: [YH-JM1 actuators and accessories](https://yhorizon.tech/jm/buy.html).** Join QQ discussion group **1065885316** to get a website discount code. The assembled actuator costs **CNY 399 after applying the code**.
 
 The YHorizon shop (YHorizon小铺) has two listings on Xianyu:
 
@@ -138,14 +152,22 @@ The YHorizon shop (YHorizon小铺) has two listings on Xianyu:
   Left: driver board and gear kit · Right: assembled JM1 actuator preorder
 </p>
 
-You also need tools that are not on the BOM, including:
+For a scratch build, loose parts or a kit, prepare the parts in the [mechanical BOM](mechanical/bom/README.md) and these assembly tools:
 
 - An arbor press
 - Loctite threadlocker / retaining compound
 - Hex keys and a small Phillips screwdriver
-- Programmer cable: 0.8 mm insulation-displacement terminal wire
 
-Videos:
+Power, communication and flashing accessories are available as options on the [website purchase page](https://yhorizon.tech/jm/buy.html):
+
+- **24 V power supply with XT30 cable**: powers the actuator.
+- **USB-to-CAN adapter**: connects the actuator to a computer for host-based commissioning and control.
+- **DAPLink programmer with a 0.8 mm 4-pin flashing cable**: for the first flash of a self-built driver board or later firmware updates.
+- **3D-printed test fixture**: secures the actuator for bench demonstrations.
+
+Production units arrive assembled and flashed. Prepare the power supply, cables and communication adapter, then follow the tutorial. A programmer is optional for later firmware maintenance.
+
+**Start with the [illustrated assembly and commissioning tutorial](https://yhorizon.tech/jm/learn/).** Choose the starting point that matches your hardware, then follow the parts check, mechanical assembly, flashing and first-run steps. These videos provide supplementary reference:
 
 - Earlier test: [Stage-1 joint motor complete | D57 H52, 8:1, 3 Nm continuous](https://www.bilibili.com/video/BV1CEtB6QELB/)
 - Full assembly: [Douyin assembly video](https://v.douyin.com/Lvc5RXRxO6M/)
@@ -169,8 +191,8 @@ Use of the project must meet the GPLv3 and CERN-OHL-S obligations. To keep deriv
 | `host-rs/` | Rust host 0.3.0. Illustrated guide: `host-rs/README.md` |
 | `sdk/` | Communication SDK 0.1.0, for your own control program |
 | `sdk/protocol/` | Motor Protocol V1.0 |
-| `guide/` | Published guides: current loop, commissioning, group sync, Ubuntu |
-| `tools/` | Setup, build, and flash scripts |
+| `guide/` | Engineering guides: current loop, commissioning, group sync and Ubuntu |
+| `tools/` | Setup, build and flash scripts |
 | `images/` | Exploded view, production-unit photos, axial section, CNC order notes |
 
 ## Firmware

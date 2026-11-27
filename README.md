@@ -4,12 +4,16 @@
 
 <!--
 YHorizon-JM 是一个源文件完全公开的开源关节电机项目：机械结构（CNC 零件 STEP、装配体 STEP、齿轮图纸）、电控硬件（嘉立创 EDA Pro 源工程、原理图、Gerber、BOM）、GD32F303 FOC 固件、Rust 上位机和通信 SDK 全部公开，可以完整复刻。
-参数：直径 58 mm，长度 58 mm，重量 360 g，行星减速比 8:1。套件和量产机按 24 V 交付。48 V 台架测得输出轴扭矩 5 N·m，峰值估算约 10 N·m。
+参数：直径 58 mm，长度 58 mm，重量 360 g，行星减速比 8:1。套件和量产机按 24 V 交付。32 V 供电下完成 5 N·m 哑铃片负载运行，持续超过 5 分钟；重复定位误差测得 5 弧分。48 V 水桶负载约 6–8 N·m、峰值超过 10 N·m 均为估算。
 软件按 GPLv3、硬件与项目文档按 CERN-OHL-S 开源，两套许可证都允许在遵守开源义务的前提下商用。希望闭源集成或免除这些义务的，请联系微信 Yet_Latitude 另签商业许可。欢迎转发、分享、推荐和宣传本项目。
 YHorizon-JM is an open-source joint motor (robot actuator) with all source files published: mechanical CAD, EasyEDA Pro PCB project, schematic, Gerber, BOM, FOC firmware, a Rust host, and a communication SDK. Software is GPLv3; hardware and project documentation are CERN-OHL-S. Both allow commercial use if their obligations are met. A separate commercial license is available via WeChat Yet_Latitude. Sharing, reposting, and recommending this project is welcome.
 -->
 
-**[项目官网与教学站（建设中）](https://yhorizon.tech/)** · [仓库使用指南](guide/README.md) · [上位机图文说明](host-rs/README.md)
+## [访问 YHorizon-JM 官网 →](https://yhorizon.tech/jm/)
+
+**[图文装配与调试教学](https://yhorizon.tech/jm/learn/)** · **[购买整机与配件](https://yhorizon.tech/jm/buy.html)** · **[性能测试视频](https://yhorizon.tech/jm/#performance)**
+
+[仓库使用指南](guide/README.md) · [上位机图文说明](host-rs/README.md)
 
 YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust 上位机 0.3.0 和通信 SDK 0.1.0，通过经典 CAN 使用 Motor Protocol V1.0。其它协议的兼容固件、适用工具和联调步骤见[兼容协议分支](https://github.com/YHorizon-Robot/YHorizon-JM/blob/jm1-motor-protocol-compat/host-rs/README.md)。
 
@@ -22,7 +26,7 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
   <img src="images/exploded.png" alt="YHorizon-JM 爆炸图" width="100%"/>
 </p>
 <p align="center">
-  爆炸图
+  爆炸图 · <a href="https://yhorizon.tech/jm/#anatomy">打开交互式三维装配与爆炸图 →</a>
 </p>
 
 <p align="center">
@@ -43,6 +47,13 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
   轴向剖面 A—A
 </p>
 
+## 官网与使用入口
+
+- [装配与调试教学](https://yhorizon.tech/jm/learn/)：按从零制作、YHorizon 套件、套件 Pro 或整机选择起点，跟随实物图解完成机械装配、烧录与首次运行。原理部分提供机械设计、配合公差、FOC、编码器、三环与协议交互演示，并附 Agent 学习提示词。
+- [上位机图文说明](host-rs/README.md)与[仓库使用指南](guide/README.md)：核对当前固件、CAN 接线、校准、电流控制、示波与多轴同步的实际操作。
+- [性能测试](https://yhorizon.tech/jm/#performance)：观看 5 N·m 负载运行与 5 弧分重复定位测试，区分实测结果与估算工况。
+- [购买](https://yhorizon.tech/shop/)与[订单查询](https://yhorizon.tech/shop/order.html)：查看配件图片、独立设置配件数量并使用优惠码；查询备货、预计日期和物流，下载购买凭证、确认收货、申请电子发票或退款。
+
 ## 当前电机
 
 仓库里是量产机的开源版本，以及套件用的铨州 CNC 版本。
@@ -61,7 +72,8 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
 | 重量 | 360 g |
 | 电机 | 无框电机 WK4310H，14 对极 |
 | 减速 | 行星减速，减速比 8 |
-| 输出轴扭矩 | 48 V 台架实测 5 N·m，峰值估算约 10 N·m。24 V 交付版本的额定扭矩需单独测定 |
+| 输出轴扭矩 | 5 N·m；32 V 供电，哑铃片与力臂加载，持续运行超过 5 分钟 |
+| 重复定位误差 | 台架测得 5 弧分，约 0.0833° |
 | 供电 | 套件和量产机按 24 V 交付。64 V 改版条件见下方说明 |
 | 编码器 | 双 MT6701，30/31 齿游标。上电定圈的理论不重复区间为输出轴 3.875 圈总跨度 |
 | MCU | GD32F303CCT6，112 MHz |
@@ -72,6 +84,8 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
 **64 V 改版说明。** 当前公开 BOM 的六只功率 MOSFET（Q1～Q6）为 HSBB6066，漏源电压绝对最大额定值为 60 V。若以 64 V 母线为设计目标，须更换有足够耐压裕量的 MOSFET，并核对母线电容、保护器件和电源芯片的耐压，验证开关和回生电压尖峰后才能确定改版的工作上限。[驱动板 BOM](hardware/bom/BOM_YHorizon-JM.xlsx) · [MOSFET 数据手册](https://atta.szlcsc.com/upload/public/pdf/source/20260204/C199340FEBF356CDA717DBD1EAA96350.pdf)
 
 早期 D57 样机的 3 N·m 视频见下文「复刻」。
+
+32 V 负载测试和重复定位测试的条件、剪辑视频与测量含义见[官网性能测试](https://yhorizon.tech/jm/#performance)。48 V 下约 6–8 N·m 为水桶负载粗估，峰值超过 10 N·m 为预计值；两者均不作为实测额定输出。
 
 ### 电流环
 
@@ -122,7 +136,7 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
 
 PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_YHorizon-JM.epro2`](hardware/easyeda/ProPrj_YHorizon-JM.epro2)。打板也可用 [`hardware/fabrication/Gerber_YHorizon-JM.zip`](hardware/fabrication/Gerber_YHorizon-JM.zip)，原理图 PDF 见 [`hardware/schematic/SCH_YHorizon-JM.pdf`](hardware/schematic/SCH_YHorizon-JM.pdf)。
 
-交流 QQ 群 **1065885316**。
+**官网购买：[YH-JM1 整机与配件](https://yhorizon.tech/jm/buy.html)。** 加入 QQ 交流群 **1065885316**，群内可领取官网优惠码，整机券后价 **399 元**。
 
 闲鱼「YHorizon小铺」有两个商品页面：
 
@@ -137,14 +151,22 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
   左：驱动板与齿轮套件　｜　右：JM1 整机预售
 </p>
 
-清单之外需要自己准备的工具（不限于）：
+自行制作或购买散件、套件时，除按[机械 BOM](mechanical/bom/README.md)备齐零件外，还需准备装配工具：
 
 - 压力机
 - 乐泰（Loctite）螺纹胶 / 固持胶
 - 内六角扳手、小十字螺丝刀
-- 烧录器线：0.8 mm 刺破式端子线
 
-装配过程请看下面的视频：
+供电、通信与烧录配件可按需要在[官网购买页](https://yhorizon.tech/jm/buy.html)选配：
+
+- **24 V 电源（带 XT30 线材）**：用于电机供电。
+- **USB 转 CAN**：连接电脑与电机，配合上位机进行调试和控制。
+- **DAPLink 烧录器（带 0.8 mm 4P 烧录线）**：用于自制驱动板的首次烧录或后续固件更新。
+- **3D 打印测试工装**：用于电机固定和台架演示。
+
+量产整机已完成装配与程序烧录，准备好电源、线材和通信适配器即可按教程使用；烧录器可按后续固件维护需要选配。
+
+**装配建议优先阅读[图文装配与调试教学](https://yhorizon.tech/jm/learn/)**，按到手状态选择起点，逐步完成零件清点、机械装配、烧录和首次运行。以下视频可作为补充参考：
 
 - 早期测试：[自研关节电机阶段一完成｜D57 H52，8 倍减速，3Nm 稳定输出](https://www.bilibili.com/video/BV1CEtB6QELB/)
 - 总装：[抖音装配视频](https://v.douyin.com/Lvc5RXRxO6M/)
@@ -168,7 +190,7 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 | `host-rs/` | Rust 上位机 0.3.0。图文说明在 `host-rs/README.md` |
 | `sdk/` | 通信 SDK 0.1.0，给自己的控制程序用 |
 | `sdk/protocol/` | Motor Protocol V1.0 |
-| `guide/` | 公开说明：电流环、校准、多轴同步、Ubuntu |
+| `guide/` | 电流环、校准、多轴同步、Ubuntu 等工程使用说明 |
 | `tools/` | 环境、编译、烧录脚本 |
 | `images/` | 爆炸图、量产机照片、轴向剖面、CNC 下单注意事项 |
 
