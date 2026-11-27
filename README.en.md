@@ -61,7 +61,7 @@ The repository has two mechanical sets: the production open-source model, and th
 
 | | Production open-source | Kit / Quanzhou CNC |
 | --- | --- | --- |
-| Models | `mechanical/MPdrawing/cad/`, including the full assembly | Parts in `mechanical/cnc/`, assembly `mechanical/asm/YH-JM装配体开源版本.STEP` |
+| Models | `mechanical/MPdrawing/cad/`, including the full assembly | Parts in `mechanical/cnc/`; assembly and drawing in `mechanical/asm/` |
 | Internals | Production structure: splined sun pin, three-pin output carrier | Structural parts adapted to Quanzhou machining |
 | Gears | Do not interchange with the kit gear set | `mechanical/gears/`, matched to this structure only |
 
@@ -119,7 +119,7 @@ Start from the BOMs. Do not order from other files first:
 Gears and structural parts from the two sets do not mix.
 
 - **Production open-source.** Complete models and assemblies are in `mechanical/MPdrawing/cad/`. The assembly is [`YH-JM总装配体量产开源版本.STEP`](mechanical/MPdrawing/cad/YH-JM总装配体量产开源版本.STEP). The other tooth count is [`YH-JM总装配体（50Z2）量产开源版本.STEP`](mechanical/MPdrawing/cad/YH-JM总装配体（50Z2）量产开源版本.STEP). The spline fit drawing is the PDF in the same directory.
-- **Kit, Quanzhou CNC.** Parts are in `mechanical/cnc/`, the assembly is [`mechanical/asm/YH-JM装配体开源版本.STEP`](mechanical/asm/YH-JM装配体开源版本.STEP), and the gears are in `mechanical/gears/`. These parts follow Quanzhou machining rules. Holes and features differ from the production model.
+- **Kit, Quanzhou CNC.** Parts are in `mechanical/cnc/`, the assembly is [`YH-JM装配体开源版本.STEP`](mechanical/asm/YH-JM装配体开源版本.STEP), the drawing is [`YH-JM工程图 v2.pdf`](mechanical/asm/YH-JM工程图%20v2.pdf), and the gears are in `mechanical/gears/`. These parts follow Quanzhou machining rules. Holes and features differ from the production model.
 
 **CNC parts are not guaranteed to match ours; try fits and adjust hole positions to your own machining.** Check the threaded-hole notes before ordering:
 
@@ -163,7 +163,7 @@ Power, communication and flashing accessories are available as options on the [w
 - **24 V power supply with XT30 cable**: powers the actuator.
 - **USB-to-CAN adapter**: connects the actuator to a computer for host-based commissioning and control.
 - **DAPLink programmer with a 0.8 mm 4-pin flashing cable**: for the first flash of a self-built driver board or later firmware updates.
-- **3D-printed test fixture**: secures the actuator for bench demonstrations.
+- **3D-printed test fixture**: secures the actuator for bench demonstrations. These models are not actuator parts: [load-test fixture](mechanical/TFcad/负载测试工装-3D打印.step), [bench mount](mechanical/TFcad/测试工装固定-3D打印.step).
 
 Production units arrive assembled and flashed. Prepare the power supply, cables and communication adapter, then follow the tutorial. A programmer is optional for later firmware maintenance.
 
@@ -180,7 +180,8 @@ Use of the project must meet the GPLv3 and CERN-OHL-S obligations. To keep deriv
 | --- | --- |
 | `mechanical/MPdrawing/cad/` | Production open-source parts and full assembly |
 | `mechanical/cnc/` | Quanzhou CNC open-source structural parts |
-| `mechanical/asm/` | Quanzhou / kit assembly STEP |
+| `mechanical/asm/` | Quanzhou / kit assembly STEP and engineering drawing |
+| `mechanical/TFcad/` | 3D-printed test fixtures: load test and bench mount |
 | `mechanical/gears/` | Kit gears; do not mix with the production gear set |
 | `mechanical/bom/` | Mechanical BOM and hardware purchase links |
 | `hardware/easyeda/` | EasyEDA Pro / JLCPCB source project |

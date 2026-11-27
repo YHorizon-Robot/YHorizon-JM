@@ -9,6 +9,7 @@
 - Updated dimensions and mass (58 mm diameter, 58 mm length, 360 g). Kits and production units ship for 24 V operation. The 32 V load test ran at 5 N·m for over five minutes; repeatability error was measured at 5 arcminutes. The 48 V bucket-load result of about 6–8 N·m and projected peak above 10 N·m are estimates. A 64 V revision requires different power MOSFETs and board-level voltage validation.
 - Illustrated current-loop readouts and documented the theoretical power-up vernier span of 3.875 output turns in total.
 - Listed the open-source production and Quanzhou CNC kit models separately. Their gear sets are incompatible. The [mechanical BOM](mechanical/bom/README.md) now includes standard hardware specifications and selected purchase links.
+- Added the kit drawing [`YH-JM工程图 v2.pdf`](mechanical/asm/YH-JM工程图%20v2.pdf) and the 3D-printed load-test fixture and bench mount in [`mechanical/TFcad/`](mechanical/TFcad/).
 
 - Updated website, assembly teaching, performance and purchase/order links; documented independent accessory quantities, fulfillment progress and refunds.
 - Published EasyEDA Pro source and assembly STEP

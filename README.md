@@ -60,7 +60,7 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
 
 | | 量产机开源版本 | 套件 / 铨州 CNC 开源版本 |
 | --- | --- | --- |
-| 模型 | `mechanical/MPdrawing/cad/`，含总装配体 | `mechanical/cnc/` 结构件，`mechanical/asm/YH-JM装配体开源版本.STEP` |
+| 模型 | `mechanical/MPdrawing/cad/`，含总装配体 | `mechanical/cnc/` 结构件，装配体和工程图在 `mechanical/asm/` |
 | 内部 | 量产结构，太阳齿为花键销，输出保持架为三销 | 结构件按铨州加工改过公差和特征 |
 | 齿轮 | 与套件齿轮不能互换 | `mechanical/gears/`，只配这套结构 |
 
@@ -118,7 +118,7 @@ YHorizon-JM 是开源关节电机。本分支提供 GD32F303 固件 1.6、Rust �
 两套机械的齿轮和结构件不能混装。
 
 - **量产机开源版本**，完整模型和总装配体在 `mechanical/MPdrawing/cad/`。总装配体是 [`YH-JM总装配体量产开源版本.STEP`](mechanical/MPdrawing/cad/YH-JM总装配体量产开源版本.STEP)，另一套齿数的总装配体是 [`YH-JM总装配体（50Z2）量产开源版本.STEP`](mechanical/MPdrawing/cad/YH-JM总装配体（50Z2）量产开源版本.STEP)。花键紧配见同目录 PDF。
-- **套件的铨州 CNC 版本**，结构件在 `mechanical/cnc/`，装配体是 [`mechanical/asm/YH-JM装配体开源版本.STEP`](mechanical/asm/YH-JM装配体开源版本.STEP)，齿轮在 `mechanical/gears/`。这些结构件按铨州的加工规则改过，孔位和特征和量产模型不完全相同。
+- **套件的铨州 CNC 版本**，结构件在 `mechanical/cnc/`，装配体是 [`YH-JM装配体开源版本.STEP`](mechanical/asm/YH-JM装配体开源版本.STEP)，工程图是 [`YH-JM工程图 v2.pdf`](mechanical/asm/YH-JM工程图%20v2.pdf)，齿轮在 `mechanical/gears/`。这些结构件按铨州的加工规则改过，孔位和特征和量产模型不完全相同。
 
 **CNC 加工不保证和我们完全一致，建议多试、按自己的加工结果修改孔位。** 下单前请对照螺纹孔注意事项：
 
@@ -162,7 +162,7 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 - **24 V 电源（带 XT30 线材）**：用于电机供电。
 - **USB 转 CAN**：连接电脑与电机，配合上位机进行调试和控制。
 - **DAPLink 烧录器（带 0.8 mm 4P 烧录线）**：用于自制驱动板的首次烧录或后续固件更新。
-- **3D 打印测试工装**：用于电机固定和台架演示。
+- **3D 打印测试工装**：用于电机固定和台架演示，不计入电机零件。[负载测试工装](mechanical/TFcad/负载测试工装-3D打印.step)、[测试工装固定](mechanical/TFcad/测试工装固定-3D打印.step)。
 
 量产整机已完成装配与程序烧录，准备好电源、线材和通信适配器即可按教程使用；烧录器可按后续固件维护需要选配。
 
@@ -179,7 +179,8 @@ PCB 源工程（嘉立创 EDA Pro / EasyEDA Pro）：[`hardware/easyeda/ProPrj_Y
 | --- | --- |
 | `mechanical/MPdrawing/cad/` | 量产机开源版本零件和总装配体 |
 | `mechanical/cnc/` | 铨州 CNC 开源版本结构件 |
-| `mechanical/asm/` | 铨州 / 套件装配体 STEP |
+| `mechanical/asm/` | 铨州 / 套件装配体 STEP 和工程图 |
+| `mechanical/TFcad/` | 3D 打印测试工装：负载测试、台架固定 |
 | `mechanical/gears/` | 套件齿轮，不能与量产齿轮互换 |
 | `mechanical/bom/` | 零件 BOM 和标准件购买链接 |
 | `hardware/easyeda/` | 嘉立创 EDA Pro 源工程 |

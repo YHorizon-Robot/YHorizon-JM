@@ -51,7 +51,7 @@
 | [YH-JM定子固定和电机主体开源版本.STEP](../cnc/YH-JM定子固定和电机主体开源版本.STEP) |
 | [YH-JM无框电机转子架开源版本.STEP](../cnc/YH-JM无框电机转子架开源版本.STEP) |
 
-装配体：[YH-JM装配体开源版本.STEP](../asm/YH-JM装配体开源版本.STEP)。
+装配体：[YH-JM装配体开源版本.STEP](../asm/YH-JM装配体开源版本.STEP)。工程图：[YH-JM工程图 v2.pdf](../asm/YH-JM工程图%20v2.pdf)。
 
 套件齿轮在 [`mechanical/gears/`](../gears/)：太阳轮、行星轮、内齿圈为 45 钢淬火图纸，中心磁编齿轮 30 齿和侧边磁编齿轮 31 齿为 POM。
 
@@ -72,3 +72,12 @@
 | [YH-JM电机输出盘量产开源版本.STEP](../MPdrawing/cad/YH-JM电机输出盘量产开源版本.STEP) |
 | [YH-JM太阳齿销（带花键）量产开源版本.STEP](../MPdrawing/cad/YH-JM太阳齿销（带花键）量产开源版本.STEP) |
 | [YH-JM花键紧配示意图量产开源版本.PDF](../MPdrawing/cad/YH-JM花键紧配示意图量产开源版本.PDF) |
+
+## 测试工装
+
+3D 打印件，用于台架，不计入电机零件。目录 [`mechanical/TFcad/`](../TFcad/)。
+
+| 文件 | 用途 |
+| --- | --- |
+| [负载测试工装-3D打印.step](../TFcad/负载测试工装-3D打印.step) | 负载测试 |
+| [测试工装固定-3D打印.step](../TFcad/测试工装固定-3D打印.step) | 台架固定 |
